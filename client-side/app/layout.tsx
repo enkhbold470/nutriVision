@@ -1,3 +1,6 @@
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
+import CameraDevicesProvider from "@/providers/CameraDevicesProvider";
 import type { Metadata, Viewport } from "next";
 import { Roboto } from "next/font/google";
 // import localFont from "next/font/local";
@@ -43,9 +46,12 @@ export default function RootLayout({
         <link rel="manifest" href="/site.webmanifest" />
       </head>
       <body className={`${roboto.className} antialiased`}>
-        {children}
-        {/* <PlantNotification /> */}
-        <BottomNavbar />
+        <ThemeProvider attribute="class" defaultTheme="system">
+          <CameraDevicesProvider>{children}</CameraDevicesProvider>
+          <Toaster />
+          <BottomNavbar />
+        </ThemeProvider>
+
       </body>
     </html>
   );
