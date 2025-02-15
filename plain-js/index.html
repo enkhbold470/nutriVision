@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>YOLO Object Detection</title>
+    <style>
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 20px;
+        }
+        #video {
+            border: 1px solid #999;
+            width: 640px;
+            height: 480px;
+        }
+        #canvas {
+            position: absolute;
+            border: 1px solid #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>YOLO Object Detection</h1>
+        <div style="position: relative;">
+            <video id="video" autoplay></video>
+            <canvas id="canvas"></canvas>
+        </div>
+        <div id="loading">Loading YOLO model...</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tensorflow/4.2.0/tf.min.js"></script>
+    <script>
+        let model;
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const loading = document.getElementById('loading');
+
+        // Initialize the camera
+        async function setupCamera() {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { width: 640, height: 480 },
+                audio: false
+            });
+            video.srcObject = stream;
+
+            return new Promise((resolve) => {
+                video.onloadedmetadata = () => {
+                    canvas.width = video.width;
+                    canvas.height = video.height;
+                    resolve(video);
+                };
+            });
+        }
+
+        // Load the YOLO TFLite model
+        async function loadModel() {
+            try {
+                model = await tf.loadGraphModel('./model.json');
+                loading.style.display = 'none';
+                // Start detecting frames after the model is loaded
+                detectFrame();
+            } catch (error) {
+                console.error('Error loading the model:', error);
+                loading.textContent = 'Error loading the model';
+            }
+        }
+
+        // Perform detection on the video frame
+        async function detectFrame() {
+            tf.engine().startScope();
+            
+            // Convert video frame to tensor
+            const videoFrame = tf.browser.fromPixels(video);
+            const resized = tf.image.resizeBilinear(videoFrame, [416, 416]); // YOLO input size
+            const normalized = resized.div(255.0);
+            const batched = normalized.expandDims(0);
+
+            // Run inference
+            const predictions = await model.predict(batched);
+            
+            // Clear previous drawings
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Process and draw predictions
+            const [boxes, scores, classes] = predictions;
+            const validDetections = await predictions[3].data();
+
+            for (let i = 0; i < validDetections[0]; i++) {
+                const [x1, y1, x2, y2] = boxes.arraySync()[0][i];
+                const score = scores.arraySync()[0][i];
+                const classId = classes.arraySync()[0][i];
+
+                if (score > 0.5) { // Confidence threshold
+                    // Convert normalized coordinates to pixel values
+                    const x = x1 * canvas.width;
+                    const y = y1 * canvas.height;
+                    const width = (x2 - x1) * canvas.width;
+                    const height = (y2 - y1) * canvas.height;
+
+                    // Draw bounding box
+                    ctx.strokeStyle = '#00ff00';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x, y, width, height);
+
+                    // Draw label
+                    ctx.fillStyle = '#00ff00';
+                    ctx.font = '16px Arial';
+                    ctx.fillText(`${classId} ${Math.round(score * 100)}%`, x, y - 5);
+                }
+            }
+
+            tf.engine().endScope();
+            requestAnimationFrame(detectFrame);
+        }
+
+        // Initialize the application
+        async function init() {
+            await setupCamera();
+            await loadModel();
+            detectFrame();
+        }
+
+        init();
+    </script>
+</body>
+</html>

@@ -45,6 +45,7 @@ export default function RootLayout({
         />
         <meta name="apple-mobile-web-app-title" content="nurtiVision" />
         <link rel="manifest" href="/site.webmanifest" />
+        <script async src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/"></script>
       </head>
       <body className={`${roboto.className} antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="white">  
