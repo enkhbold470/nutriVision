@@ -5,6 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import {Input} from "@/components/ui/input"   
 export default function Goal() {
   const [goal, setGoal] = useState("")
   const [date, setDate] = useState("")
@@ -24,7 +25,7 @@ export default function Goal() {
           <label htmlFor="goal" className="block text-sm font-medium ">
             Goal (e.g., lose 10 lbs)
           </label>
-          <input
+          <Input
             type="text"
             id="goal"
             value={goal}
@@ -37,7 +38,7 @@ export default function Goal() {
           <label htmlFor="date" className="block text-sm font-medium ">
             Target Date
           </label>
-          <input
+          <Input
             type="date"
             id="date"
             value={date}
@@ -48,7 +49,8 @@ export default function Goal() {
         </div>
         <Button
           type="submit"
-          className="w-full  py-2 px-4 rounded-md hfocus:outline-none focus:ring-2  focus:ring-offset-2"
+          className="w-full  py-2 px-4 rounded-md focus:outline-none focus:ring-2  focus:ring-offset-2"
+          variant="default"
         >
           Set Goal
         </Button>
