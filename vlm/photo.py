@@ -9,6 +9,10 @@ import requests
 import pandas as pd
 import json
 # client = OpenAI()
+import dotenv
+import os
+
+dotenv.load_dotenv()
 
 class Weights(BaseModel):
     kind_of_food: List[str]
@@ -49,7 +53,7 @@ def calculate_nutrition(image_array):
 
 
 
-    API_KEY = "LwoY2OBmIeqV69Faow5ZhH7HNKu2PuyyZgO7Oap3"
+    API_KEY = os.getenv('USDA_API_KEY')
     for i in range(len(kind_and_weights)):
         SEARCH_QUERY=kind_and_weights['kind_of_food'][i]
         URL = f"https://api.nal.usda.gov/fdc/v1/foods/search?query={SEARCH_QUERY}&api_key={API_KEY}"
@@ -57,6 +61,7 @@ def calculate_nutrition(image_array):
         data = response.json()
         data['foods'][0]['foodNutrients'][0]['value']
         df = pd.DataFrame(data['foods'][0]['foodNutrients'])
+        print(df)
         
 
 if __name__ == "__main__":
