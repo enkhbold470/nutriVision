@@ -70,8 +70,8 @@ export function MobileSettingsComponent() {
             {option.toggle ? (
               <Switch />
             ) : (
-              <Button onClick={option.action} className="">
-                &gt;
+              <Button variant="ghost" onClick={option.action} className="">
+                ...
               </Button>
             )}
           </div>
