@@ -3,7 +3,7 @@ import { Roboto } from "next/font/google";
 // import localFont from "next/font/local";
 import "./globals.css";
 import BottomNavbar from "@/components/navbar/bottom-navbar";
-import PlantNotification from "@/components/plant-notification";
+// import PlantNotification from "@/components/plant-notification";
 const roboto = Roboto({
   subsets: ["latin"],
   weight: ["100", "900"],
@@ -15,7 +15,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "nurtiVision",
   description:
-    "nurtiVision is a platform for managing greenhouses and plants. We are leveraging IoT Sensors with ESP32 and AI to help you grow your plants. Whether you're new to planting or an experienced grower, we've got you covered.",
+    "nurtiVision is nutrition tracking app that helps you to track your daily nutrition intake and helps you to maintain a healthy lifestyle.",
 };
 
 export default function RootLayout({
