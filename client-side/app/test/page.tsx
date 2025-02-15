@@ -294,6 +294,27 @@ const Home = (props: Props) => {
     }, []);
 
     useInterval({ callback: runPrediction, delay: animateDelay });
+    const [nutritionInfo, setNutritionInfo] = useState({
+        calories: 0,
+        potassium: 0,
+        protein: 0,
+        carbs: 0,
+        transFat: 0,
+        satFat: 0,
+      })
+      // This function would typically be called when an image is captured and analyzed
+  const updateNutritionInfo = () => {
+    // In a real app, this would be replaced with actual image analysis and data retrieval
+    setNutritionInfo({
+      calories: Math.floor(Math.random() * 500),
+      potassium: Math.floor(Math.random() * 1000),
+      protein: Math.floor(Math.random() * 50),
+      carbs: Math.floor(Math.random() * 100),
+      transFat: Math.floor(Math.random() * 5),
+      satFat: Math.floor(Math.random() * 10),
+    })
+  }
+
 
     return (
         <div className="flex flex-col h-screen w-screen items-center">
@@ -398,6 +419,19 @@ const Home = (props: Props) => {
                     </div>
                 </div>
             </div>
+
+
+            <div className="bg-gray-100 p-4 rounded-lg">
+        <h2 className="text-xl font-semibold mb-2">Nutrition Information</h2>
+        <ul className="space-y-2">
+          <li>Total Calories: {nutritionInfo.calories} kcal</li>
+          <li>Potassium: {nutritionInfo.potassium} mg</li>
+          <li>Protein: {nutritionInfo.protein} g</li>
+          <li>Total Carbs: {nutritionInfo.carbs} g</li>
+          <li>Total Trans Fat: {nutritionInfo.transFat} g</li>
+          <li>Saturated Fat: {nutritionInfo.satFat} g</li>
+        </ul>
+      </div>
             {loading && (
                 <div
                     className={clsx(
