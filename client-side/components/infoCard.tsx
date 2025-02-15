@@ -14,7 +14,7 @@ const InfoCard: React.FC<InfoCardProps> = ({
   prediction,
 }) => {
   return (
-    <div className="bg-white p-4 rounded-lg shadow-md">
+    <div className=" p-4 rounded-lg shadow-md">
       <div className="flex items-center mb-2">
         {icon}
         <h2 className="ml-2 text-lg font-semibold">{title}</h2>

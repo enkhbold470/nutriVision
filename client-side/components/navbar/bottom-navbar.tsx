@@ -36,7 +36,7 @@ export default function BottomNavbar() {
   const [activeTab, setActiveTab] = useState("home");
 
   return (
-    <nav className="fixed bottom-4 left-4 right-4 bg-white bg-opacity-80 backdrop-blur-md rounded-full border border-fern_green-200 border-opacity-10 shadow-xl p-2 flex justify-around">
+    <nav className="fixed bottom-4 left-4 right-4   bg-opacity-80 backdrop-blur-md rounded-full border border-fern_green-200 border-opacity-10 shadow-xl p-2 flex justify-around">
       {navItems.map((item, index) => (
         <NavItem
           key={index}

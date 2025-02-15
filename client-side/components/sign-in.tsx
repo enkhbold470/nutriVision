@@ -13,7 +13,7 @@ export function SignInComponent() {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+        <div className="  py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <form className="space-y-6" action="#" method="POST">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-fern_green-DEFAULT">
@@ -92,7 +92,7 @@ export function SignInComponent() {
                 <div className="w-full border-t border-fern_green-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-fern_green-DEFAULT">
+                <span className="px-2   text-fern_green-DEFAULT">
                   Or continue with
                 </span>
               </div>
@@ -102,7 +102,7 @@ export function SignInComponent() {
               <div>
                 <a
                   href="#"
-                  className="w-full inline-flex justify-center py-2 px-4 border border-fern_green-300 rounded-full shadow-sm bg-white text-sm font-medium text-fern_green-DEFAULT hover:bg-anti-flash_white-DEFAULT"
+                  className="w-full inline-flex justify-center py-2 px-4 border border-fern_green-300 rounded-full shadow-sm   text-sm font-medium text-fern_green-DEFAULT hover:bg-anti-flash_white-DEFAULT"
                 >
                   <span className="sr-only">Sign in with Facebook</span>
                   <svg className="w-5 h-5" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20">
@@ -114,7 +114,7 @@ export function SignInComponent() {
               <div>
                 <a
                   href="#"
-                  className="w-full inline-flex justify-center py-2 px-4 border border-fern_green-300 rounded-full shadow-sm bg-white text-sm font-medium text-fern_green-DEFAULT hover:bg-anti-flash_white-DEFAULT"
+                  className="w-full inline-flex justify-center py-2 px-4 border border-fern_green-300 rounded-full shadow-sm   text-sm font-medium text-fern_green-DEFAULT hover:bg-anti-flash_white-DEFAULT"
                 >
                   <span className="sr-only">Sign in with Twitter</span>
                   <svg className="w-5 h-5" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20">
@@ -126,7 +126,7 @@ export function SignInComponent() {
               <div>
                 <a
                   href="#"
-                  className="w-full inline-flex justify-center py-2 px-4 border border-fern_green-300 rounded-full shadow-sm bg-white text-sm font-medium text-fern_green-DEFAULT hover:bg-anti-flash_white-DEFAULT"
+                  className="w-full inline-flex justify-center py-2 px-4 border border-fern_green-300 rounded-full shadow-sm   text-sm font-medium text-fern_green-DEFAULT hover:bg-anti-flash_white-DEFAULT"
                 >
                   <span className="sr-only">Sign in with GitHub</span>
                   <svg className="w-5 h-5" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20">

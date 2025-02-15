@@ -15,7 +15,7 @@ export default function SensorInfo({
   color,
 }: SensorInfoProps) {
   return (
-    <div className="bg-white rounded-full p-4 flex items-center space-x-3 shadow-md">
+    <div className="  rounded-full p-4 flex items-center space-x-3 shadow-md">
       <div className={`p-2 rounded-full ${color}`}>
         <Icon className="w-6 h-6" />
       </div>
