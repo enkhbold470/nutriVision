@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-
+import { Button } from "@/components/ui/button"
 export default function Goal() {
   const [goal, setGoal] = useState("")
   const [date, setDate] = useState("")
@@ -18,10 +18,10 @@ export default function Goal() {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4 text-green-600">Set Your Goal</h1>
+      <h1 className="text-2xl font-bold mb-4 ">Set Your Goal</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="goal" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="goal" className="block text-sm font-medium ">
             Goal (e.g., lose 10 lbs)
           </label>
           <input
@@ -29,12 +29,12 @@ export default function Goal() {
             id="goal"
             value={goal}
             onChange={(e) => setGoal(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+            className="mt-1 block w-full rounded-md shadow-sm "
             required
           />
         </div>
         <div>
-          <label htmlFor="date" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="date" className="block text-sm font-medium ">
             Target Date
           </label>
           <input
@@ -42,16 +42,16 @@ export default function Goal() {
             id="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
+            className="mt-1 block w-full rounded-md  shadow-sm "
             required
           />
         </div>
-        <button
+        <Button
           type="submit"
-          className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+          className="w-full  py-2 px-4 rounded-md hfocus:outline-none focus:ring-2  focus:ring-offset-2"
         >
           Set Goal
-        </button>
+        </Button>
       </form>
     </div>
   )

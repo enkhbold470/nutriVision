@@ -42,7 +42,7 @@
           {activeNotifications.map((notification, index) => (
             <div
               key={notification.id}
-              className="bg-white rounded-lg shadow-lg p-4 mb-2 flex items-center justify-between"
+              className="  rounded-lg shadow-lg p-4 mb-2 flex items-center justify-between"
               style={{
                 opacity: 1 - index * 0.2,
                 transform: `translateY(${index * 10}px)`,

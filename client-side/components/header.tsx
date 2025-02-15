@@ -10,7 +10,7 @@ const weatherData: WeatherData = {
 
 export default function Header() {
   return (
-    <header className="flex justify-between items-center mb-8 bg-white p-4 rounded-lg shadow-md">
+    <header className="flex justify-between items-center mb-8  p-4 rounded-lg shadow-md">
       <div className="flex items-center space-x-4">
         <div className="relative w-16 h-16">
           <Image

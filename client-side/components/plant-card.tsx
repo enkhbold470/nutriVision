@@ -12,7 +12,7 @@ export default function PlantCard({
   prediction,
 }: PlantCardProps) {
   return (
-    <div className="bg-white rounded-3xl shadow-lg overflow-hidden">
+    <div className="  rounded-3xl shadow-lg overflow-hidden">
       <div className="relative w-full h-64">
         <Image
           src={image}
