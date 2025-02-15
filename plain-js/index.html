@@ -74,43 +74,80 @@
             
             // Convert video frame to tensor
             const videoFrame = tf.browser.fromPixels(video);
-            const resized = tf.image.resizeBilinear(videoFrame, [416, 416]); // YOLO input size
+            const resized = tf.image.resizeBilinear(videoFrame, [640, 640]); // YOLO input size
             const normalized = resized.div(255.0);
             const batched = normalized.expandDims(0);
+            const input = batched.transpose([0, 3, 1, 2]);
 
             // Run inference
-            const predictions = await model.predict(batched);
+            const predictions = model.predict(input);
             
             // Clear previous drawings
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // console.log(predictions);
 
-            // Process and draw predictions
-            const [boxes, scores, classes] = predictions;
-            const validDetections = await predictions[3].data();
+            const predictionsTensor = predictions;
 
-            for (let i = 0; i < validDetections[0]; i++) {
-                const [x1, y1, x2, y2] = boxes.arraySync()[0][i];
-                const score = scores.arraySync()[0][i];
-                const classId = classes.arraySync()[0][i];
+            // Extract bounding boxes and class probabilities
+            const boundingBoxes = predictionsTensor.slice([0, 0, 0], [1, 84, 4]); // Assuming 4 values for each box (x_min, y_min, x_max, y_max)
+            const classProbabilities = predictionsTensor.slice([0, 0, 4], [1, 84, 80]); // Assuming 80 class probabilities
 
-                if (score > 0.5) { // Confidence threshold
-                    // Convert normalized coordinates to pixel values
-                    const x = x1 * canvas.width;
-                    const y = y1 * canvas.height;
-                    const width = (x2 - x1) * canvas.width;
-                    const height = (y2 - y1) * canvas.height;
+            // Convert bounding boxes and probabilities to arrays
+            const boundingBoxesArray = await boundingBoxes.array();
+            const classProbabilitiesArray = await classProbabilities.array();
 
-                    // Draw bounding box
-                    ctx.strokeStyle = '#00ff00';
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(x, y, width, height);
+            // Example: Get box coordinates for the first detected object
+            const firstBoundingBox = boundingBoxesArray[0][0];  // This should give [x_min, y_min, x_max, y_max]
+            // console.log("Bounding Box for first object:", firstBoundingBox);
 
-                    // Draw label
-                    ctx.fillStyle = '#00ff00';
-                    ctx.font = '16px Arial';
-                    ctx.fillText(`${classId} ${Math.round(score * 100)}%`, x, y - 5);
+            // Get class probabilities for the first object
+            const firstClassProbabilities = classProbabilitiesArray[0][0];
+            // console.log("Class Probabilities for first object:", firstClassProbabilities);
+
+            const threshold = 0.5;
+
+            const filteredBoxes = [];
+            for (let i = 0; i < boundingBoxesArray[0].length; i++) {
+                const box = boundingBoxesArray[0][i];
+                const scores = classProbabilitiesArray[0][i];
+                const maxScore = Math.max(...scores);  // Max confidence score
+                if (maxScore > threshold) {
+                    filteredBoxes.push({
+                        box: box,  // [x_min, y_min, x_max, y_max]
+                        score: maxScore,
+                        class: scores.indexOf(maxScore) // The class with the highest score
+                    });
                 }
             }
+            console.log("Filtered Boxes:", filteredBoxes);
+
+            // Process and draw predictions
+            // const [boxes, scores, classes] = predictions;
+            // const validDetections = await predictions[3].data();
+
+            // for (let i = 0; i < validDetections[0]; i++) {
+            //     const [x1, y1, x2, y2] = boxes.arraySync()[0][i];
+            //     const score = scores.arraySync()[0][i];
+            //     const classId = classes.arraySync()[0][i];
+
+            //     if (score > 0.5) { // Confidence threshold
+            //         // Convert normalized coordinates to pixel values
+            //         const x = x1 * canvas.width;
+            //         const y = y1 * canvas.height;
+            //         const width = (x2 - x1) * canvas.width;
+            //         const height = (y2 - y1) * canvas.height;
+
+            //         // Draw bounding box
+            //         ctx.strokeStyle = '#00ff00';
+            //         ctx.lineWidth = 2;
+            //         ctx.strokeRect(x, y, width, height);
+
+            //         // Draw label
+            //         ctx.fillStyle = '#00ff00';
+            //         ctx.font = '16px Arial';
+            //         ctx.fillText(`${classId} ${Math.round(score * 100)}%`, x, y - 5);
+            //     }
+            // }
 
             tf.engine().endScope();
             requestAnimationFrame(detectFrame);
