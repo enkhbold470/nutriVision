@@ -428,9 +428,9 @@ const Home = (props: Props) => {
             </div>
 
 
-            <div className="p-4 rounded-lg">
+            <div className="p-4 rounded-lg min-h-[40%]">
         <h2 className="text-xl font-semibold mb-2">Nutrition Information</h2>
-        <ul className="space-y-2">
+        <ul className="space-y-2 ">
           <li>Total Calories: {nutritionInfo.calories} kcal</li>
           <li>Potassium: {nutritionInfo.potassium} mg</li>
           <li>Protein: {nutritionInfo.protein} g</li>

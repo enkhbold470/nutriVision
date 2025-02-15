@@ -7,6 +7,7 @@ import { Roboto } from "next/font/google";
 import "./globals.css";
 import BottomNavbar from "@/components/navbar/bottom-navbar";
 // import PlantNotification from "@/components/plant-notification";
+import Dark from "@/components/DarkMode";
 const roboto = Roboto({
   subsets: ["latin"],
   weight: ["100", "900"],
@@ -46,10 +47,13 @@ export default function RootLayout({
         <link rel="manifest" href="/site.webmanifest" />
       </head>
       <body className={`${roboto.className} antialiased`}>
-        <ThemeProvider attribute="class" defaultTheme="system">
+        <ThemeProvider attribute="class" defaultTheme="white">  
+          
+
           <CameraDevicesProvider>{children}</CameraDevicesProvider>
           <Toaster />
           <BottomNavbar />
+       
         </ThemeProvider>
 
       </body>

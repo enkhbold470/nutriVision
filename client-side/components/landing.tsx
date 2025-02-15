@@ -4,7 +4,8 @@ import type React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-
+import { Button } from "@/components/ui/button"
+import {Input} from "@/components/ui/input"
 export default function Home() {
   const [age, setAge] = useState("")
   const [gender, setGender] = useState("")
@@ -19,30 +20,30 @@ export default function Home() {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4 text-green-600">Fitness Tracker</h1>
+      <h1 className="text-2xl font-bold mb-4 ">Fitness Tracker</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="age" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="age" className="block text-sm font-medium ">
             Age
           </label>
-          <input
+          <Input
             type="number"
             id="age"
             value={age}
             onChange={(e) => setAge(e.target.value)}
-            className="mt-1 block w-full rounded-md border shadow-sm focus:border-green-500 focus:ring-green-500"
+            className="mt-1 block w-full rounded-md border shadow-sm "
             required
           />
         </div>
         <div>
-          <label htmlFor="gender" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="gender" className="block text-sm font-medium ">
             Gender
           </label>
           <select
             id="gender"
             value={gender}
             onChange={(e) => setGender(e.target.value)}
-            className="mt-1 block w-full rounded-md border shadow-sm focus:border-green-500 focus:ring-green-500"
+            className="mt-1 block w-full rounded-md border shadow-sm "
             required
           >
             <option value="">Select gender</option>
@@ -52,24 +53,24 @@ export default function Home() {
           </select>
         </div>
         <div>
-          <label htmlFor="height" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="height" className="block text-sm font-medium ">
             Height (cm)
           </label>
-          <input
+          <Input
             type="number"
             id="height"
             value={height}
             onChange={(e) => setHeight(e.target.value)}
-            className="mt-1 block w-full rounded-md border shadow-sm focus:border-green-500 focus:ring-green-500"
+            className="mt-1 block w-full rounded-md border shadow-sm "
             required
           />
         </div>
-        <button
+        <Button
           type="submit"
-          className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+          className="w-full py-2 px-4 rounded-md  focus:outline-none focus:ring-2  focus:ring-offset-2"
         >
           Next
-        </button>
+        </Button>
       </form>
     </div>
   )
