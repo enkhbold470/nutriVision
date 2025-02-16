@@ -75,6 +75,53 @@
                 padding-bottom: 70px;
             }
         }
+
+        .step-item {
+            transition: all 0.3s ease;
+        }
+
+        .step-item.completed {
+            opacity: 1 !important;
+        }
+
+        .step-item.completed .step-status i {
+            color: #198754 !important;
+        }
+
+        .step-icon {
+            width: 40px;
+            height: 40px;
+            background: #f8f9fa;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .step-item.completed .step-icon {
+            background: #d1e7dd;
+            color: #198754;
+        }
+
+        .step-item.current {
+            opacity: 1 !important;
+        }
+
+        .step-item.current .step-icon {
+            background: #cfe2ff;
+            color: #0d6efd;
+        }
+
+        .modal-content {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        #loadingProgress {
+            transition: width 0.5s ease;
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -97,7 +144,11 @@
                         <a class="nav-link" href="{{ url_for('logs') }}">History</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('profile') }}">Profile</a>
+                        <a href="#" 
+                           onclick="showLoadingAndNavigate(event, '{{ url_for('profile') }}')" 
+                           class="nav-link {% if request.endpoint == 'profile' %}active{% endif %}">
+                            <i class="bi bi-person-circle"></i> Profile
+                        </a>
                     </li>
                     {% endif %}
                 </ul>
@@ -131,7 +182,9 @@
                 <i class="bi bi-clock-history d-block"></i>
                 <small>History</small>
             </a>
-            <a href="{{ url_for('profile') }}" class="text-center text-decoration-none {% if request.endpoint == 'profile' %}text-primary{% else %}text-muted{% endif %}">
+            <a href="#" 
+               onclick="showLoadingAndNavigate(event, '{{ url_for('profile') }}')" 
+               class="text-center text-decoration-none {% if request.endpoint == 'profile' %}text-primary{% else %}text-muted{% endif %}">
                 <i class="bi bi-person d-block"></i>
                 <small>Profile</small>
             </a>
@@ -148,6 +201,79 @@
                     You've exceeded your daily nutrition quota!
                 </div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add the loading modal to base template so it's available everywhere -->
+    <div class="modal fade" id="loadingModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body p-4">
+                    <div class="text-center mb-4">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <h5 class="mb-2" id="loadingStepText">Loading your profile...</h5>
+                        <div class="progress" style="height: 10px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" 
+                                 id="loadingProgress"
+                                 style="width: 0%">
+                            </div>
+                        </div>
+                    </div>
+                    <div id="loadingSteps">
+                        <div class="step-item d-flex align-items-center mb-3 opacity-50">
+                            <div class="step-icon me-3">
+                                <i class="bi bi-person-circle"></i>
+                            </div>
+                            <div class="step-text">
+                                <h6 class="mb-0">Loading Profile Data</h6>
+                                <small class="text-muted">Fetching your personal information</small>
+                            </div>
+                            <div class="step-status ms-auto">
+                                <i class="bi bi-clock text-muted"></i>
+                            </div>
+                        </div>
+                        <div class="step-item d-flex align-items-center mb-3 opacity-50">
+                            <div class="step-icon me-3">
+                                <i class="bi bi-graph-up"></i>
+                            </div>
+                            <div class="step-text">
+                                <h6 class="mb-0">Calculating Nutrition</h6>
+                                <small class="text-muted">Processing your daily intake</small>
+                            </div>
+                            <div class="step-status ms-auto">
+                                <i class="bi bi-clock text-muted"></i>
+                            </div>
+                        </div>
+                        <div class="step-item d-flex align-items-center mb-3 opacity-50">
+                            <div class="step-icon me-3">
+                                <i class="bi bi-lightbulb"></i>
+                            </div>
+                            <div class="step-text">
+                                <h6 class="mb-0">Generating Insights</h6>
+                                <small class="text-muted">Analyzing your progress</small>
+                            </div>
+                            <div class="step-status ms-auto">
+                                <i class="bi bi-clock text-muted"></i>
+                            </div>
+                        </div>
+                        <div class="step-item d-flex align-items-center opacity-50">
+                            <div class="step-icon me-3">
+                                <i class="bi bi-trophy"></i>
+                            </div>
+                            <div class="step-text">
+                                <h6 class="mb-0">Checking Achievements</h6>
+                                <small class="text-muted">Updating your milestones</small>
+                            </div>
+                            <div class="step-status ms-auto">
+                                <i class="bi bi-clock text-muted"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -209,6 +335,72 @@
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 console.log('[ServiceWorker] New service worker controlling the page');
             });
+        }
+
+        function showLoadingAndNavigate(event, profileUrl) {
+            event.preventDefault();
+            
+            const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+            const progressBar = document.getElementById('loadingProgress');
+            const loadingStepText = document.getElementById('loadingStepText');
+            const steps = document.querySelectorAll('.step-item');
+            
+            // Show loading modal
+            loadingModal.show();
+            
+            // Function to update step status
+            function updateStep(stepIndex, isCompleted) {
+                const step = steps[stepIndex];
+                steps.forEach(s => s.classList.remove('current'));
+                
+                if (isCompleted) {
+                    step.classList.add('completed');
+                    step.querySelector('.step-status i').classList.remove('bi-clock', 'text-muted');
+                    step.querySelector('.step-status i').classList.add('bi-check-circle-fill');
+                } else {
+                    step.classList.add('current');
+                }
+            }
+            
+            // Loading steps configuration
+            const loadingSteps = [
+                { text: 'Loading Profile Data...', progress: 25 },
+                { text: 'Calculating Nutrition...', progress: 50 },
+                { text: 'Generating Insights...', progress: 75 },
+                { text: 'Checking Achievements...', progress: 90 }
+            ];
+            
+            let currentStep = 0;
+            let totalDuration = 2000; // Total loading time in milliseconds
+            let stepDuration = totalDuration / loadingSteps.length;
+            
+            function processNextStep() {
+                if (currentStep < loadingSteps.length) {
+                    // Update previous step as completed
+                    if (currentStep > 0) {
+                        updateStep(currentStep - 1, true);
+                    }
+                    
+                    // Update current step
+                    updateStep(currentStep, false);
+                    loadingStepText.textContent = loadingSteps[currentStep].text;
+                    progressBar.style.width = loadingSteps[currentStep].progress + '%';
+                    
+                    currentStep++;
+                    setTimeout(processNextStep, stepDuration);
+                } else {
+                    // Complete the last step
+                    updateStep(loadingSteps.length - 1, true);
+                    progressBar.style.width = '100%';
+                    loadingStepText.textContent = 'Complete!';
+                    
+                    // Navigate to profile page
+                    window.location.href = profileUrl;
+                }
+            }
+            
+            // Start the loading sequence
+            processNextStep();
         }
     </script>
     {% block extra_js %}{% endblock %}

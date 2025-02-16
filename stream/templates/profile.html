@@ -275,10 +275,130 @@
     background-color: #f44336;
     color: #000;
 }
+
+.step-item {
+    transition: all 0.3s ease;
+}
+
+.step-item.completed {
+    opacity: 1 !important;
+}
+
+.step-item.completed .step-status i {
+    color: #198754 !important;
+}
+
+.step-icon {
+    width: 40px;
+    height: 40px;
+    background: #f8f9fa;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+}
+
+.step-item.completed .step-icon {
+    background: #d1e7dd;
+    color: #198754;
+}
+
+.step-item.current {
+    opacity: 1 !important;
+}
+
+.step-item.current .step-icon {
+    background: #cfe2ff;
+    color: #0d6efd;
+}
+
+.modal-content {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+#loadingProgress {
+    transition: width 0.5s ease;
+}
 </style>
 {% endblock %}
 
 {% block content %}
+<!-- Add this right after the opening body tag or at the start of the content block -->
+<div class="modal fade" id="loadingModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body p-4">
+                <div class="text-center mb-4">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <h5 class="mb-2" id="loadingStepText">Loading your profile...</h5>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" 
+                             id="loadingProgress"
+                             style="width: 0%">
+                        </div>
+                    </div>
+                </div>
+                <div id="loadingSteps">
+                    <div class="step-item d-flex align-items-center mb-3 opacity-50">
+                        <div class="step-icon me-3">
+                            <i class="bi bi-person-circle"></i>
+                        </div>
+                        <div class="step-text">
+                            <h6 class="mb-0">Loading Profile Data</h6>
+                            <small class="text-muted">Fetching your personal information</small>
+                        </div>
+                        <div class="step-status ms-auto">
+                            <i class="bi bi-clock text-muted"></i>
+                        </div>
+                    </div>
+                    <div class="step-item d-flex align-items-center mb-3 opacity-50">
+                        <div class="step-icon me-3">
+                            <i class="bi bi-graph-up"></i>
+                        </div>
+                        <div class="step-text">
+                            <h6 class="mb-0">Calculating Nutrition</h6>
+                            <small class="text-muted">Processing your daily intake</small>
+                        </div>
+                        <div class="step-status ms-auto">
+                            <i class="bi bi-clock text-muted"></i>
+                        </div>
+                    </div>
+                    <div class="step-item d-flex align-items-center mb-3 opacity-50">
+                        <div class="step-icon me-3">
+                            <i class="bi bi-lightbulb"></i>
+                        </div>
+                        <div class="step-text">
+                            <h6 class="mb-0">Generating Insights</h6>
+                            <small class="text-muted">Analyzing your progress</small>
+                        </div>
+                        <div class="step-status ms-auto">
+                            <i class="bi bi-clock text-muted"></i>
+                        </div>
+                    </div>
+                    <div class="step-item d-flex align-items-center opacity-50">
+                        <div class="step-icon me-3">
+                            <i class="bi bi-trophy"></i>
+                        </div>
+                        <div class="step-text">
+                            <h6 class="mb-0">Checking Achievements</h6>
+                            <small class="text-muted">Updating your milestones</small>
+                        </div>
+                        <div class="step-status ms-auto">
+                            <i class="bi bi-clock text-muted"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="profile-header">
     <img src="https://placekeanu.com/1080/1080" alt="Profile Picture" class="profile-picture">
     <div>
@@ -417,7 +537,10 @@
                     <div class="progress mb-3" style="height: 25px;">
                         <div class="progress-bar {% if calorie_percent > 100 %}bg-danger{% endif %}" 
                              role="progressbar" 
-                             style="width: {{ min(calorie_percent, 100) }}%">
+                             style="width: {{ min(calorie_percent, 100) }}%"
+                             data-calories="{{ calories }}"
+                             data-max-calories="{{ max_calories }}"
+                             data-percent="{{ calorie_percent }}">
                             {{ calories }}/{{ max_calories }} kcal
                         </div>
                     </div>
@@ -531,8 +654,57 @@
     </a>
 </div>
 
+<!-- Add the toast container at the bottom of the page, before the closing body tag -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="calorieToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header bg-danger text-white">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <strong class="me-auto">Calorie Alert</strong>
+            <small>just now</small>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-lightning-charge-fill text-warning me-2" style="font-size: 1.2rem;"></i>
+                <div>
+                    You've exceeded your daily calorie limit!
+                    <br>
+                    <small class="text-muted" id="calorieToastDetails"></small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-// Auto-refresh nutrition data every 60 seconds
+// Function to check calories and show toast if exceeded
+function checkCalorieLimit() {
+    const progressBar = document.querySelector('.progress-bar[data-calories]');
+    if (!progressBar) return;
+
+    const calories = parseInt(progressBar.dataset.calories);
+    const maxCalories = parseInt(progressBar.dataset.maxCalories);
+    const percent = parseInt(progressBar.dataset.percent);
+
+    if (percent > 100) {
+        const toast = new bootstrap.Toast(document.getElementById('calorieToast'), {
+            autohide: true,
+            delay: 5000
+        });
+        
+        // Update toast details
+        document.getElementById('calorieToastDetails').textContent = 
+            `Current: ${calories} kcal / Limit: ${maxCalories} kcal (${percent}%)`;
+        
+        // Show the toast
+        toast.show();
+    }
+}
+
+// Check calories when the page loads
+document.addEventListener('DOMContentLoaded', checkCalorieLimit);
+
+// Auto-refresh nutrition data every 60 seconds and check calories
 function refreshNutritionData() {
     fetch('/get_nutrition_data')
         .then(response => response.json())
@@ -545,6 +717,9 @@ function refreshNutritionData() {
             document.getElementById('potassium').textContent = Math.round(data.potassium);
             document.getElementById('carbs').textContent = Math.round(data.carbs);
             document.getElementById('total_fat').textContent = Math.round(data.total_fat);
+            
+            // Check calorie limit after updating
+            checkCalorieLimit();
         })
         .catch(error => console.error('Error refreshing nutrition data:', error));
 }
@@ -611,5 +786,70 @@ function showAIInsights() {
 
 // Start the loading animation immediately
 showAIInsights();
+
+// Add this to your existing script section
+document.addEventListener('DOMContentLoaded', function() {
+    const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+    const progressBar = document.getElementById('loadingProgress');
+    const loadingStepText = document.getElementById('loadingStepText');
+    const steps = document.querySelectorAll('.step-item');
+    
+    // Show loading modal
+    loadingModal.show();
+    
+    // Function to update step status
+    function updateStep(stepIndex, isCompleted) {
+        const step = steps[stepIndex];
+        steps.forEach(s => s.classList.remove('current'));
+        
+        if (isCompleted) {
+            step.classList.add('completed');
+            step.querySelector('.step-status i').classList.remove('bi-clock', 'text-muted');
+            step.querySelector('.step-status i').classList.add('bi-check-circle-fill');
+        } else {
+            step.classList.add('current');
+        }
+    }
+    
+    // Simulate loading steps
+    const loadingSteps = [
+        { text: 'Loading Profile Data...', progress: 25 },
+        { text: 'Calculating Nutrition...', progress: 50 },
+        { text: 'Generating Insights...', progress: 75 },
+        { text: 'Checking Achievements...', progress: 90 }
+    ];
+    
+    let currentStep = 0;
+    
+    function processNextStep() {
+        if (currentStep < loadingSteps.length) {
+            // Update previous step as completed
+            if (currentStep > 0) {
+                updateStep(currentStep - 1, true);
+            }
+            
+            // Update current step
+            updateStep(currentStep, false);
+            loadingStepText.textContent = loadingSteps[currentStep].text;
+            progressBar.style.width = loadingSteps[currentStep].progress + '%';
+            
+            currentStep++;
+            setTimeout(processNextStep, 800); // Adjust timing as needed
+        } else {
+            // Complete the last step
+            updateStep(loadingSteps.length - 1, true);
+            progressBar.style.width = '100%';
+            loadingStepText.textContent = 'Complete!';
+            
+            // Hide modal after a short delay
+            setTimeout(() => {
+                loadingModal.hide();
+            }, 500);
+        }
+    }
+    
+    // Start the loading sequence
+    processNextStep();
+});
 </script>
 {% endblock %} 

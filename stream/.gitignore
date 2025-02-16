@@ -1,6 +1,6 @@
 .env
-capture_images/*.jpg
 capture_images/*.png
+capture_images/*.jpg
 capture_images/*.jpeg
 capture_images/*.webp
 *.db
