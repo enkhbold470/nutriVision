@@ -1,6 +1,7 @@
 import sqlite3
 import os
 from datetime import datetime
+from werkzeug.security import generate_password_hash
 
 # Database configuration
 DATABASE_NAME = "nutrition_data.db"
@@ -16,10 +17,38 @@ def init_db():
     conn = get_db_connection()
     cur = conn.cursor()
 
-    # Create scanned_items table
+    # Drop existing tables to recreate with new schema
+    cur.execute('DROP TABLE IF EXISTS scanned_items')
+    cur.execute('DROP TABLE IF EXISTS users')
+
+    # Create users table
+    cur.execute('''
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        age INTEGER NOT NULL,
+        weight REAL NOT NULL,
+        target_weight REAL,
+        gender TEXT NOT NULL,
+        height INTEGER NOT NULL,
+        goal INTEGER NOT NULL,
+        target_date DATETIME NOT NULL,
+        calories INTEGER NOT NULL,
+        potassium INTEGER NOT NULL,
+        protein INTEGER NOT NULL,
+        carbs INTEGER NOT NULL,
+        total_fat INTEGER NOT NULL,
+        max_daily_calories INTEGER NOT NULL,
+        max_daily_protein INTEGER NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )''')
+
+    # Create scanned_items table with user_id reference
     cur.execute('''
     CREATE TABLE IF NOT EXISTS scanned_items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
         food_name TEXT NOT NULL,
         total_cal REAL,
@@ -27,24 +56,24 @@ def init_db():
         protein REAL,
         total_carbs REAL,
         total_fat REAL,
-        image_path TEXT
-    )
-    ''')
+        image_path TEXT,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+    )''')
 
-    # Create an index on timestamp for faster sorting
-    cur.execute('''
-    CREATE INDEX IF NOT EXISTS idx_timestamp 
-    ON scanned_items(timestamp DESC)
-    ''')
+    # Create indexes
+    cur.execute('CREATE INDEX IF NOT EXISTS idx_timestamp ON scanned_items(timestamp DESC)')
+    cur.execute('CREATE INDEX IF NOT EXISTS idx_username ON users(username)')
+    cur.execute('CREATE INDEX IF NOT EXISTS idx_user_id ON scanned_items(user_id)')
 
     conn.commit()
     conn.close()
 
-def add_scan_record(food_name, nutrition_data, image_path=None):
+def add_scan_record(user_id, food_name, nutrition_data, image_path=None):
     """
     Add a new scan record to the database.
     
     Args:
+        user_id (int): ID of the user who scanned the food
         food_name (str): Name of the food item
         nutrition_data (dict): Dictionary containing nutrition information
         image_path (str, optional): Path to the saved image
@@ -54,9 +83,10 @@ def add_scan_record(food_name, nutrition_data, image_path=None):
     
     cur.execute('''
     INSERT INTO scanned_items 
-    (food_name, total_cal, potassium, protein, total_carbs, total_fat, image_path, timestamp)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    (user_id, food_name, total_cal, potassium, protein, total_carbs, total_fat, image_path, timestamp)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
+        user_id,
         food_name,
         nutrition_data.get('total_cal', 0),
         nutrition_data.get('potassium', 0),
@@ -70,13 +100,14 @@ def add_scan_record(food_name, nutrition_data, image_path=None):
     conn.commit()
     conn.close()
 
-def get_scan_records(page=1, per_page=10):
+def get_scan_records(page=1, per_page=10, user_id=None):
     """
     Get paginated scan records.
     
     Args:
         page (int): Page number (1-based)
         per_page (int): Number of records per page
+        user_id (int): Optional user ID to filter records
     
     Returns:
         tuple: (records, total_pages, total_records)
@@ -85,7 +116,10 @@ def get_scan_records(page=1, per_page=10):
     cur = conn.cursor()
     
     # Get total count
-    cur.execute("SELECT COUNT(*) FROM scanned_items")
+    if user_id is not None:
+        cur.execute("SELECT COUNT(*) FROM scanned_items WHERE user_id = ?", (user_id,))
+    else:
+        cur.execute("SELECT COUNT(*) FROM scanned_items")
     total_records = cur.fetchone()[0]
     
     # Calculate total pages
@@ -93,12 +127,21 @@ def get_scan_records(page=1, per_page=10):
     
     # Get paginated records
     offset = (page - 1) * per_page
-    cur.execute("""
-        SELECT id, timestamp, food_name, total_cal, potassium, protein, total_carbs, total_fat, image_path
-        FROM scanned_items 
-        ORDER BY timestamp DESC
-        LIMIT ? OFFSET ?
-    """, (per_page, offset))
+    if user_id is not None:
+        cur.execute("""
+            SELECT id, timestamp, food_name, total_cal, potassium, protein, total_carbs, total_fat, image_path
+            FROM scanned_items 
+            WHERE user_id = ?
+            ORDER BY timestamp DESC
+            LIMIT ? OFFSET ?
+        """, (user_id, per_page, offset))
+    else:
+        cur.execute("""
+            SELECT id, timestamp, food_name, total_cal, potassium, protein, total_carbs, total_fat, image_path
+            FROM scanned_items 
+            ORDER BY timestamp DESC
+            LIMIT ? OFFSET ?
+        """, (per_page, offset))
     
     records = cur.fetchall()
     conn.close()
@@ -137,6 +180,38 @@ def search_records(search_term, date_filter=None):
     conn.close()
     
     return records
+
+def create_user(username, password, age, weight, target_weight, gender, height, goal, target_date):
+    """Create a new user with nutrition goals."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        # Calculate base nutrition values based on user data
+        bmr = calculate_bmr(weight, height, age, gender)
+        max_daily_calories = calculate_daily_calories(bmr, goal)
+        max_daily_protein = calculate_daily_protein(weight, goal)
+        
+        hashed_password = generate_password_hash(password)
+        
+        cur.execute('''
+        INSERT INTO users (
+            username, password, age, weight, target_weight, gender, height, goal, target_date,
+            calories, potassium, protein, carbs, total_fat,
+            max_daily_calories, max_daily_protein
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            username, hashed_password, age, weight, target_weight, gender, height, goal, target_date,
+            0, 0, 0, 0, 0,  # Initial daily values
+            max_daily_calories, max_daily_protein
+        ))
+        
+        conn.commit()
+        return cur.lastrowid
+    except sqlite3.IntegrityError:
+        return None
+    finally:
+        conn.close()
 
 # Initialize the database when this module is imported
 if not os.path.exists(DATABASE_NAME):
