@@ -33,6 +33,39 @@
             <p class="lead text-muted">View your previous food scans and nutrition information</p>
         </header>
 
+        <!-- Top Navigation -->
+        <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4 rounded shadow-sm">
+            <div class="container-fluid">
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="topNav">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('home') }}">
+                                <i class="bi bi-camera"></i> Scanner
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="{{ url_for('logs') }}">
+                                <i class="bi bi-clock-history"></i> History
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('profile') }}">
+                                <i class="bi bi-person"></i> Profile
+                            </a>
+                        </li>
+                    </ul>
+                    <div class="d-flex">
+                        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger">
+                            <i class="bi bi-box-arrow-right"></i> Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
         <div class="row justify-content-center">
             <div class="col-12">
                 <div class="card mb-4">
@@ -98,26 +131,47 @@
                         </div>
 
                         {% if total_pages > 1 %}
-                        <nav aria-label="Page navigation" class="mt-4">
-                            <ul class="pagination justify-content-center">
-                                {% if page > 1 %}
-                                <li class="page-item">
-                                    <a class="page-link" href="{{ url_for('logs', page=page-1) }}">Previous</a>
-                                </li>
-                                {% endif %}
-                                
-                                {% for p in page_range %}
-                                <li class="page-item {% if p == page %}active{% endif %}">
-                                    <a class="page-link" href="{{ url_for('logs', page=p) }}">{{ p }}</a>
-                                </li>
-                                {% endfor %}
+                        <!-- Bottom Navigation -->
+                        <nav class="navbar navbar-expand-lg navbar-light bg-light mt-4 rounded shadow-sm">
+                            <div class="container-fluid">
+                                <div class="navbar-nav mx-auto">
+                                    <nav aria-label="Page navigation">
+                                        <ul class="pagination mb-0">
+                                            {% if page > 1 %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="{{ url_for('logs', page=1) }}">
+                                                    <i class="bi bi-chevron-double-left"></i>
+                                                </a>
+                                            </li>
+                                            <li class="page-item">
+                                                <a class="page-link" href="{{ url_for('logs', page=page-1) }}">
+                                                    <i class="bi bi-chevron-left"></i>
+                                                </a>
+                                            </li>
+                                            {% endif %}
+                                            
+                                            {% for p in page_range %}
+                                            <li class="page-item {% if p == page %}active{% endif %}">
+                                                <a class="page-link" href="{{ url_for('logs', page=p) }}">{{ p }}</a>
+                                            </li>
+                                            {% endfor %}
 
-                                {% if page < total_pages %}
-                                <li class="page-item">
-                                    <a class="page-link" href="{{ url_for('logs', page=page+1) }}">Next</a>
-                                </li>
-                                {% endif %}
-                            </ul>
+                                            {% if page < total_pages %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="{{ url_for('logs', page=page+1) }}">
+                                                    <i class="bi bi-chevron-right"></i>
+                                                </a>
+                                            </li>
+                                            <li class="page-item">
+                                                <a class="page-link" href="{{ url_for('logs', page=total_pages) }}">
+                                                    <i class="bi bi-chevron-double-right"></i>
+                                                </a>
+                                            </li>
+                                            {% endif %}
+                                        </ul>
+                                    </nav>
+                                </div>
+                            </div>
                         </nav>
                         {% endif %}
                     </div>
