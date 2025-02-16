@@ -338,7 +338,7 @@ def capture_image():
         
         # Call GPT-4-Vision API
         vision_response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             messages=[
                 {
                     "role": "system",
