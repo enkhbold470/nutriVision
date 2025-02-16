@@ -2,6 +2,11 @@ import sqlite3
 import os
 from datetime import datetime
 from werkzeug.security import generate_password_hash
+from dotenv import load_dotenv
+from flask import g
+
+# Load environment variables
+load_dotenv()
 
 # Database configuration
 DATABASE_NAME = "nutrition_data.db"
@@ -212,6 +217,18 @@ def create_user(username, password, age, weight, target_weight, gender, height, 
         return None
     finally:
         conn.close()
+
+def get_db():
+    """Get database connection for use with 'with' statement."""
+    if not hasattr(g, 'db'):
+        g.db = get_db_connection()
+    return g.db
+
+def close_db(e=None):
+    """Close the database connection."""
+    db = g.pop('db', None)
+    if db is not None:
+        db.close()
 
 # Initialize the database when this module is imported
 if not os.path.exists(DATABASE_NAME):

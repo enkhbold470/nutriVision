@@ -77,47 +77,15 @@
             const resized = tf.image.resizeBilinear(videoFrame, [640, 640]); // YOLO input size
             const normalized = resized.div(255.0);
             const batched = normalized.expandDims(0);
-<<<<<<< HEAD
-            // Transpose from [1, 640, 640, 3] to [1, 3, 640, 640]
-            const input = batched.transpose([0, 3, 1, 2]);
-
-            // Run inference with the transposed input
-            const predictions =  model.predict(input);
-=======
             const input = batched.transpose([0, 3, 1, 2]);
 
             // Run inference
             const predictions = model.predict(input);
->>>>>>> ca21c35cdc335e7e2619768b0d88ce77c3e5989a
             
             // Clear previous drawings
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             // console.log(predictions);
 
-<<<<<<< HEAD
-            // Process and draw predictions
-            // const [boxes, scores, classes] = predictions;
-            console.log('Predictions:', predictions);
-            const validDetections = await predictions[3].data();
-
-            // for (let i = 0; i < validDetections[0]; i++) {
-            //     const [x1, y1, x2, y2] = boxes.arraySync()[0][i];
-            //     const score = scores.arraySync()[0][i];
-            //     const classId = classes.arraySync()[0][i];
-
-            //     if (score > 0.5) { // Confidence threshold
-            //         // Convert normalized coordinates to pixel values
-            //         const x = x1 * canvas.width;
-            //         const y = y1 * canvas.height;
-            //         const width = (x2 - x1) * canvas.width;
-            //         const height = (y2 - y1) * canvas.height;
-
-            //         // Draw bounding box
-            //         ctx.strokeStyle = '#00ff00';
-            //         ctx.lineWidth = 2;
-            //         ctx.strokeRect(x, y, width, height);
-
-=======
             const predictionsTensor = predictions;
 
             // Extract bounding boxes and class probabilities
@@ -174,7 +142,6 @@
             //         ctx.lineWidth = 2;
             //         ctx.strokeRect(x, y, width, height);
 
->>>>>>> ca21c35cdc335e7e2619768b0d88ce77c3e5989a
             //         // Draw label
             //         ctx.fillStyle = '#00ff00';
             //         ctx.font = '16px Arial';
