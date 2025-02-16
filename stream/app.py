@@ -268,8 +268,20 @@ def capture_image():
     
     try:
         print("[DEBUG] Calling GPT-4-Vision API")
+        # Return initial response to show loading state
+        response = {
+            "status": "analyzing",
+            "message": "Analyzing your food...",
+            "steps": [
+                "Capturing image...",
+                "Processing image...",
+                "Identifying food items...",
+                "Calculating nutrition facts..."
+            ]
+        }
+        
         # Call GPT-4-Vision API
-        response = client.chat.completions.create(
+        vision_response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {
@@ -302,11 +314,11 @@ def capture_image():
             max_tokens=500
         )
         print("[DEBUG] Received API response")
-        print(f"[DEBUG] Raw response content: {response.choices[0].message.content}")
+        print(f"[DEBUG] Raw response content: {vision_response.choices[0].message.content}")
         
         try:
             # Clean the response content by removing markdown code blocks if present
-            content = response.choices[0].message.content
+            content = vision_response.choices[0].message.content
             if content.startswith('```') and content.endswith('```'):
                 content = content.strip('`').strip()
                 if content.startswith('json\n'):  # Remove "json" language identifier if present
@@ -332,15 +344,17 @@ def capture_image():
             )
             print("[DEBUG] Scan record added to database")
             
+            # Add success status to the response
+            nutrition_data["status"] = "success"
             return nutrition_data, 200
             
         except json.JSONDecodeError:
             print("[DEBUG] Failed to parse JSON response")
-            return {"error": "Failed to analyze the image"}, 400
+            return {"error": "Failed to analyze the image", "status": "error"}, 400
             
     except Exception as e:
         print(f"[DEBUG] Error occurred: {str(e)}")
-        return {"error": str(e)}, 500
+        return {"error": str(e), "status": "error"}, 500
 
 # Serve static files from the captured_images directory
 @app.route('/captured_images/<filename>')
@@ -495,8 +509,10 @@ def get_personalized_feedback(user):
     """Get AI-driven personalized feedback based on user's data and progress."""
     try:
         # Get user's recent activity
-        conn = get_db()
+        conn = get_db_connection()
         cur = conn.cursor()
+        
+        # Get recent scans and nutrition data
         cur.execute('''
             SELECT 
                 COUNT(*) as scan_count,
@@ -510,6 +526,40 @@ def get_personalized_feedback(user):
             AND timestamp >= CURRENT_DATE - INTERVAL '7 days'
         ''', (user.id,))
         recent_activity = cur.fetchone()
+        
+        # Get daily scan counts for the last week
+        cur.execute('''
+            SELECT 
+                DATE(timestamp) as scan_date,
+                COUNT(*) as daily_scans,
+                ROUND(SUM(total_cal)::numeric, 1) as daily_calories,
+                ROUND(SUM(protein)::numeric, 1) as daily_protein,
+                ROUND(SUM(total_carbs)::numeric, 1) as daily_carbs,
+                ROUND(SUM(total_fat)::numeric, 1) as daily_fat
+            FROM scanned_items 
+            WHERE user_id = %s 
+            AND timestamp >= CURRENT_DATE - INTERVAL '7 days'
+            GROUP BY DATE(timestamp)
+            ORDER BY scan_date DESC
+        ''', (user.id,))
+        daily_logs = cur.fetchall()
+        
+        # Get most recent foods
+        cur.execute('''
+            SELECT 
+                food_name,
+                ROUND(total_cal::numeric, 1) as calories,
+                ROUND(protein::numeric, 1) as protein,
+                ROUND(total_carbs::numeric, 1) as carbs,
+                ROUND(total_fat::numeric, 1) as fat,
+                timestamp
+            FROM scanned_items 
+            WHERE user_id = %s 
+            ORDER BY timestamp DESC 
+            LIMIT 5
+        ''', (user.id,))
+        recent_foods = cur.fetchall()
+        
         conn.close()
 
         # Calculate progress towards goal
@@ -517,8 +567,29 @@ def get_personalized_feedback(user):
         weight_diff = abs(user.data['weight'] - user.data['target_weight'])
         daily_change_needed = weight_diff / max(1, days_remaining) if days_remaining > 0 else 0
 
-        # Get list of recent foods
-        recent_foods = recent_activity['foods'].split(',') if recent_activity['foods'] else []
+        # Format daily logs for better context
+        daily_logs_formatted = []
+        for log in daily_logs:
+            daily_logs_formatted.append({
+                'date': log['scan_date'].strftime('%Y-%m-%d'),
+                'scans': log['daily_scans'],
+                'calories': float(log['daily_calories']),
+                'protein': float(log['daily_protein']),
+                'carbs': float(log['daily_carbs']),
+                'fat': float(log['daily_fat'])
+            })
+
+        # Format recent foods for better context
+        recent_foods_formatted = []
+        for food in recent_foods:
+            recent_foods_formatted.append({
+                'name': food['food_name'],
+                'calories': float(food['calories']),
+                'protein': float(food['protein']),
+                'carbs': float(food['carbs']),
+                'fat': float(food['fat']),
+                'time': food['timestamp'].strftime('%Y-%m-%d %H:%M')
+            })
 
         # Prepare context for AI
         context = {
@@ -530,26 +601,28 @@ def get_personalized_feedback(user):
                 "height": user.data['height'],
                 "goal": "lose weight" if user.data['goal'] == 1 else "maintain weight" if user.data['goal'] == 2 else "gain weight",
                 "days_remaining": max(0, days_remaining),
-                "daily_change_needed": daily_change_needed
+                "daily_change_needed": round(daily_change_needed, 2)
             },
             "recent_activity": {
                 "scans_last_7_days": recent_activity['scan_count'],
-                "recent_foods": recent_foods[-5:],  # Last 5 foods
-                "avg_daily_calories": round(recent_activity['avg_calories'] or 0, 1),
-                "avg_daily_protein": round(recent_activity['avg_protein'] or 0, 1),
-                "avg_daily_carbs": round(recent_activity['avg_carbs'] or 0, 1),
-                "avg_daily_fat": round(recent_activity['avg_fat'] or 0, 1)
+                "avg_daily_calories": float(recent_activity['avg_calories'] or 0),
+                "avg_daily_protein": float(recent_activity['avg_protein'] or 0),
+                "avg_daily_carbs": float(recent_activity['avg_carbs'] or 0),
+                "avg_daily_fat": float(recent_activity['avg_fat'] or 0)
             },
+            "daily_logs": daily_logs_formatted,
+            "recent_foods": recent_foods_formatted,
             "targets": {
                 "daily_calories": user.data['max_daily_calories'],
                 "daily_protein": user.data['max_daily_protein']
             }
         }
-        print(f"[DEBUG] Context: {context}")
+        
+        print(f"[DEBUG] Sending context to Perplexity: {json.dumps(context, indent=2)}")
 
         # Get AI insights
         response = perplexity_client.chat.completions.create(
-            model="sonar",
+            model="sonar-pro",
             messages=[
                 {
                     "role": "system",
@@ -560,6 +633,11 @@ def get_personalized_feedback(user):
                         "recommendations": ["string", "string", "string"],
                         "motivation": "string"
                     }
+                    Base your analysis on:
+                    1. Progress towards weight goal
+                    2. Adherence to daily calorie and protein targets
+                    3. Meal logging consistency
+                    4. Recent food choices and nutrition balance
                     Keep insights and recommendations specific, actionable, and based on the data provided."""
                 },
                 {
@@ -571,6 +649,7 @@ def get_personalized_feedback(user):
         )
 
         feedback = json.loads(response.choices[0].message.content)
+        print(f"[DEBUG] Received feedback from Perplexity: {json.dumps(feedback, indent=2)}")
         return feedback
 
     except Exception as e:

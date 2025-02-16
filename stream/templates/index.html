@@ -3,126 +3,212 @@
 {% block title %}NutriVision - Food Scanner{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-12 col-lg-8">
-        <header class="text-center mb-5">
-            <h1 class="display-4">NutriVision</h1>
-            <p class="lead text-muted">Scan your food for instant nutrition information</p>
-        </header>
-
-        <div class="video-container mb-4">
-            <img src="{{ url_for('video_feed') }}" alt="Video Feed" class="w-100 h-100">
-        </div>
-
-        <div class="text-center mb-4">
-            <button onclick="capture()" class="btn btn-primary btn-lg" id="captureBtn">
-                <i class="bi bi-camera"></i> Capture & Analyze
-            </button>
-        </div>
-
-        <div class="loading" id="loadingIndicator">
-            Analyzing your food...
-        </div>
-
-        <div class="error-message" id="errorMessage"></div>
-        <div class="success-message" id="successMessage"></div>
-
-        <div class="result-container" id="result">
-            <div class="text-center text-muted">
-                Nutrition information will appear here
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Food Scanner</h5>
+                </div>
+                <div class="card-body">
+                    <div class="video-container mb-3">
+                        <img id="video_feed" src="{{ url_for('video_feed') }}" class="img-fluid rounded">
+                    </div>
+                    <button id="captureBtn" class="btn btn-primary">
+                        <i class="bi bi-camera"></i> Capture Food
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-async function capture() {
-    const captureBtn = document.getElementById('captureBtn');
-    const loadingIndicator = document.getElementById('loadingIndicator');
-    const resultDiv = document.getElementById('result');
-    
-    captureBtn.disabled = true;
-    loadingIndicator.style.display = 'block';
-    resultDiv.innerHTML = '<div class="text-center text-muted">Processing...</div>';
-    
-    try {
-        const response = await fetch('/capture');
-        const data = await response.json();
-        
-        if (data.exceeded_quota) {
-            checkQuota(data);
-        }
-        
-        if (data.error) {
-            showError(data.error);
-            resultDiv.innerHTML = '<div class="text-center text-muted">Error analyzing image</div>';
-        } else {
-            showSuccess('Food analyzed successfully!');
-            resultDiv.innerHTML = formatNutritionData(data);
-        }
-    } catch (err) {
-        showError('Error: ' + err.message);
-        resultDiv.innerHTML = '<div class="text-center text-muted">Error analyzing image</div>';
-    } finally {
-        loadingIndicator.style.display = 'none';
-        captureBtn.disabled = false;
-    }
-}
-
-function formatNutritionData(data) {
-    return `
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">${data.name}</h5>
-                <div class="row">
-                    <div class="col-md-6">
-                        <ul class="list-group list-group-flush">
-                            <li class="list-group-item d-flex justify-content-between">
-                                <span>Calories:</span>
-                                <strong>${data.nutrition.total_cal} kcal</strong>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between">
-                                <span>Protein:</span>
-                                <strong>${data.nutrition.protein}g</strong>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between">
-                                <span>Carbs:</span>
-                                <strong>${data.nutrition.total_carbs}g</strong>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between">
-                                <span>Fat:</span>
-                                <strong>${data.nutrition.total_fat}g</strong>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between">
-                                <span>Potassium:</span>
-                                <strong>${data.nutrition.potassium}mg</strong>
-                            </li>
-                        </ul>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Analysis Results</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Skeleton Loading -->
+                    <div id="analysisLoading" style="display: none;">
+                        <div class="skeleton-loading mb-3">
+                            <div class="skeleton-text"></div>
+                            <div class="skeleton-text"></div>
+                            <div class="progress mb-2">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div>
+                            </div>
+                            <div id="analysisSteps" class="small text-muted">
+                                <!-- Steps will be inserted here -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Results -->
+                    <div id="analysisResults">
+                        <p class="text-muted text-center">Capture a food item to see nutrition information</p>
                     </div>
                 </div>
             </div>
         </div>
-    `;
+    </div>
+</div>
+
+<style>
+.video-container {
+    position: relative;
+    width: 100%;
+    background: #f8f9fa;
+    border-radius: 8px;
+    overflow: hidden;
 }
 
-function showError(message) {
-    const errorDiv = document.getElementById('errorMessage');
-    errorDiv.textContent = message;
-    errorDiv.style.display = 'block';
-    setTimeout(() => {
-        errorDiv.style.display = 'none';
-    }, 5000);
+.video-container img {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
 }
 
-function showSuccess(message) {
-    const successDiv = document.getElementById('successMessage');
-    successDiv.textContent = message;
-    successDiv.style.display = 'block';
-    setTimeout(() => {
-        successDiv.style.display = 'none';
-    }, 5000);
+/* Skeleton Loading Animation */
+@keyframes shimmer {
+    0% { background-position: -1000px 0; }
+    100% { background-position: 1000px 0; }
 }
+
+.skeleton-loading {
+    animation: fade-in 0.3s ease-in;
+}
+
+.skeleton-text {
+    height: 20px;
+    margin-bottom: 10px;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 1000px 100%;
+    animation: shimmer 2s infinite;
+    border-radius: 4px;
+}
+
+.skeleton-text:last-child {
+    width: 80%;
+}
+
+.analysis-step {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
+}
+
+.analysis-step.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+@keyframes fade-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+</style>
+
+<script>
+document.getElementById('captureBtn').addEventListener('click', function() {
+    const loadingDiv = document.getElementById('analysisLoading');
+    const resultsDiv = document.getElementById('analysisResults');
+    const stepsDiv = document.getElementById('analysisSteps');
+    
+    // Show loading state
+    loadingDiv.style.display = 'block';
+    resultsDiv.innerHTML = '';
+    
+    fetch('/capture')
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw err;
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.status === 'analyzing') {
+                // Show analysis steps with animation
+                stepsDiv.innerHTML = data.steps.map((step, index) => 
+                    `<div class="analysis-step" style="animation-delay: ${index * 0.5}s">
+                        <i class="bi bi-arrow-right"></i> ${step}
+                    </div>`
+                ).join('');
+                
+                // Trigger animations
+                setTimeout(() => {
+                    document.querySelectorAll('.analysis-step').forEach(step => {
+                        step.classList.add('show');
+                    });
+                }, 100);
+            }
+            
+            if (data.status === 'success') {
+                // Show results
+                loadingDiv.style.display = 'none';
+                resultsDiv.innerHTML = `
+                    <h6 class="mb-3">${data.name}</h6>
+                    <ul class="list-group">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Calories
+                            <span class="badge bg-primary rounded-pill">${data.nutrition.total_cal}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Protein
+                            <span class="badge bg-success rounded-pill">${data.nutrition.protein}g</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Carbs
+                            <span class="badge bg-info rounded-pill">${data.nutrition.total_carbs}g</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Fat
+                            <span class="badge bg-warning rounded-pill">${data.nutrition.total_fat}g</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Potassium
+                            <span class="badge bg-secondary rounded-pill">${data.nutrition.potassium}mg</span>
+                        </li>
+                    </ul>`;
+            }
+        })
+        .catch(error => {
+            // Stop loading animation
+            loadingDiv.style.display = 'none';
+            
+            // Handle no food detected case
+            if (error.error === 'No food detected in the image') {
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-warning alert-dismissible fade show">
+                        <div class="text-center mb-3">
+                            <i class="bi bi-camera-fill" style="font-size: 2rem;"></i>
+                        </div>
+                        <h6 class="text-center mb-2">No Food Detected</h6>
+                        <p class="text-center mb-0">Please ensure your food item is clearly visible in the camera and try again.</p>
+                        <div class="text-center mt-3">
+                            <small class="text-muted">
+                                <i class="bi bi-lightbulb"></i> Tips:
+                                <ul class="list-unstyled mt-2">
+                                    <li>Center the food in the frame</li>
+                                    <li>Ensure good lighting</li>
+                                    <li>Hold the camera steady</li>
+                                </ul>
+                            </small>
+                        </div>
+                    </div>`;
+                
+                // Clear the message after 5 seconds
+                setTimeout(() => {
+                    resultsDiv.innerHTML = `
+                        <p class="text-muted text-center">Capture a food item to see nutrition information</p>`;
+                }, 5000);
+            } else {
+                // Handle other errors
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle"></i> ${error.error || 'Failed to analyze image'}
+                    </div>`;
+            }
+            console.error('Error:', error);
+        });
+});
 </script>
 {% endblock %}
