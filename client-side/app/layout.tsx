@@ -7,10 +7,10 @@ import { Roboto } from "next/font/google";
 import "./globals.css";
 import BottomNavbar from "@/components/navbar/bottom-navbar";
 // import PlantNotification from "@/components/plant-notification";
-import Dark from "@/components/DarkMode";
+// import Dark from "@/components/DarkMode";
 const roboto = Roboto({
   subsets: ["latin"],
-  weight: ["100", "900"],
+  weight: ["400", "900"],
 });
 export const viewport: Viewport = {
   themeColor: "#8FCE00",
@@ -30,14 +30,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link
+        {/* <link
           rel="icon"
           type="image/png"
-          href="/favicon-48x48.png"
+          // href="/favicon-48x48.png"
           sizes="48x48"
-        />
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-        <link rel="shortcut icon" href="/favicon.ico" />
+        /> */}
+        {/* <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="shortcut icon" href="/favicon.ico" /> */}
         <link
           rel="apple-touch-icon"
           sizes="180x180"
