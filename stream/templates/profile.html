@@ -283,7 +283,7 @@
     <img src="https://placekeanu.com/1080/1080" alt="Profile Picture" class="profile-picture">
     <div>
         <h2 class="mb-1">{{ user.username }}</h2>
-        <p class="text-muted mb-0">Member since {{ user.created_at[:10] if user.created_at else 'N/A' }}</p>
+        <p class="text-muted mb-0">Member since 2025</p>
     </div>
 </div>
 
@@ -341,7 +341,7 @@
         </div>
 
         <!-- Activity Tracker Card -->
-        <div class="bento-card">
+        <!-- <div class="bento-card">
             <h4 class="mb-4">Activity Tracker</h4>
             <div class="activity-grid">
                 <div class="activity-calendar">
@@ -369,7 +369,7 @@
                     <span>More</span>
                 </div>
             </div>
-        </div>
+        </div> -->
     </div>
 
     <!-- Column 2: Personal Info and Nutrition -->
@@ -439,11 +439,11 @@
                     <h5>Other Nutrients</h5>
                     <ul class="list-group">
                         <li class="list-group-item d-flex justify-content-between">
-                            <span>Potassium:</span>
+                            <span>K:</span>
                             <strong>{{ (totals.potassium|default(0) if totals else 0)|round|int }} mg</strong>
                         </li>
                         <li class="list-group-item d-flex justify-content-between">
-                            <span>Carbohydrates:</span>
+                            <span>Carbs:</span>
                             <strong>{{ (totals.carbs|default(0) if totals else 0)|round|int }} g</strong>
                         </li>
                         <li class="list-group-item d-flex justify-content-between">
