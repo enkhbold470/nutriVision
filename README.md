@@ -1,17 +1,28 @@
 # NurtiVision
+
+
 # The Problem
 
 I (Archita) have tried countless ways to count my calories, but every time, I ended up giving up—it was just too much work. Manually adding up numbers everyday became overwhelming. Yes, iPhone apps exist that let you take pictures of your food, but they aren’t live, or capable of tracking your daily caloric intake–-I would have to end up writing down and adding my total calories myself by hand, and existing iPhone applications do not already do this for me. They also don’t tell you whether you’re actually working toward your food-intake goals and making progress.
 
+![Microsoft Edge](https://github.com/user-attachments/assets/c2880a2f-6faf-43aa-a1bb-b3c2e8bc06e4)
+
+
+
 The bottom line problem: I want to lose weight, but I need a live assistant to watch what I eat and count my calories because I am too busy to manually add up the numbers. While iPhone applications make you take a picture of your food, and tell you the calories for a particular meal, users want a truly effortless experience. I (Archita) have always dreamed of someone to watch what I eat, and give me a notification whenever I binge eat chocolates, or when I cross my daily caloric intake. 
 
-Just like Steve Jobs with the iPhone, who introduced a solution people didn’t even realize they needed, our application provides an effortless way to track food intake in real time. Once you use it, you’ll wonder how you ever lived without it! And we pulled it off! 🚀
 
 # The Solution
+
 
 The report below follows the assumption that we are deploying our application in the Ray-Ban Meta Glasses—a sleek pair of glasses. In our demo, our application runs on Meta Quest 2.
 We assume that these glasses will be as common as a smartphone in the future. 
 Our AI-powered VR application will automatically track what you eat, logging calories, protein, fat, potassium, and carbs in real time. If a user is binge-eating unhealthy foods, the system sends a live notification, telling them to stop and helping them work towards their goals.
+
+
+![Built-in Retina Display](https://github.com/user-attachments/assets/9c2b9db9-4bf4-43a1-8761-0b1f2349ad5a)
+
+
 
 ## User Experience Workflow
 
@@ -27,11 +38,14 @@ It’s incredible that we created a novel application with the potential to revo
 
 We developed an object detection model based on YOLOv11 to perform initial food detection and integrated our application with the OpenAI API for calorie counting. Since the original YOLO model was trained on the COCO dataset, which lacks class labels corresponding to different kinds of food, we scraped food images from online datasets and used the Grounding DINO model to annotate them with bounding boxes for YOLO finetuning. The model was fine tuned on a Jetson Orin Nano. The model is deployed on a web app on a Meta Quest 2 using the onnxruntime JS library and accesses the live video feed to make predictions. Specifically, the model detects when food is in the frame (future support will be added for detecting when a person is eating) and the web app automatically captures a picture to be used as input for a query to the OpenAI API (the YOLO model makes this process less expensive by reducing the number of queries). The OpenAI API call allows us to determine what food the user is eating, its weight, and the approximate nutrient content. We make a further API call to the USDA caloric food database to ensure that our nutrient predictions are more accurate. This nutrient information is sent to an SQL database and stored for future reference. If the user exceeds their daily calorie intake goal, they will receive a notification from the app. 
 
+
+
 ## Business Model
 
 $10 Billion Dollar Market Cap estimation. 
 We expect our app to be used on the Meta Ray-Ban Glasses, and aggressive AI/VR adoption in the next 5-10 years. 
 As if they aren’t already becoming common, the Meta Ray-Ban Glasses are rapidly gaining traction and will soon be ubiquitous.
+![20250215_124717](https://github.com/user-attachments/assets/ed376d44-4669-4feb-9ad8-6b02b8e81739)
 
 We solve the core calorie-tracking pain point better than any other app, and this could be the next MyFitnessPal but smarter, faster, and fully automated. 
 
@@ -43,6 +57,9 @@ Our app assumes aggressive AI/VR adoption, seamless integration into daily life,
 - **Susan** - Stanford, specializes in Hardware Camera Integration and ML/AI
 - **Archita** - Cornell, specializes in Backend Development and ML/AI
 - **Akaash** - Georgia Tech, specializes in Vision and Backend Development
+
+  
+![20250215_094915](https://github.com/user-attachments/assets/619972d8-a6f1-4e4a-87c1-d462a183149d)
 
 # Next Steps
 
