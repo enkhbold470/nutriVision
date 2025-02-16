@@ -66,22 +66,158 @@
     border-radius: 8px;
     margin-top: 1rem;
 }
+
+/* Activity Tracker Styles */
+.activity-grid {
+    margin-top: 1rem;
+    display: flex;
+}
+
+.activity-calendar {
+    display: grid;
+    grid-template-columns: repeat(52, 1fr);
+    gap: 3px;
+    padding: 10px;
+}
+
+.activity-week {
+    display: grid;
+    grid-template-rows: repeat(7, 1fr);
+    gap: 3px;
+}
+
+.activity-day {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    position: relative;
+    cursor: pointer;
+}
+
+.activity-day:hover .activity-tooltip {
+    display: block;
+}
+
+.activity-tooltip {
+    display: none;
+    position: absolute;
+    background: #24292e;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    z-index: 1000;
+}
+
+.activity-legend {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 12px;
+    color: #586069;
+}
+
+.activity-level {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+}
+
+/* Skeleton Loading Animation */
+@keyframes shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 1000px 100%;
+    animation: shimmer 2s infinite;
+    border-radius: 4px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.skeleton.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.skeleton-text {
+    height: 20px;
+    margin-bottom: 10px;
+    width: 100%;
+}
+
+.skeleton-text.short {
+    width: 60%;
+}
+
+.skeleton-badge {
+    height: 24px;
+    width: 100px;
+    margin-bottom: 15px;
+}
+
+.skeleton-list-item {
+    height: 24px;
+    margin-bottom: 15px;
+}
+
+.skeleton-quote {
+    height: 60px;
+    margin-top: 15px;
+}
+
+.content-item {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.content-item.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Hide skeletons when content is loaded */
+.content-loaded .skeleton {
+    display: none;
+}
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="bento-grid">
     <!-- AI Insights Card -->
-    <div class="bento-card">
+    <div class="bento-card" id="aiInsightsCard">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h4 class="mb-0">AI-Driven Insights</h4>
-            <span class="status-badge status-{{ feedback.overall_status.replace(' ', '-') }}">
+            <!-- Skeleton loading for status badge -->
+            <div class="skeleton skeleton-badge"></div>
+            <span class="status-badge status-{{ feedback.overall_status.replace(' ', '-') }} d-none">
                 {{ feedback.overall_status }}
             </span>
         </div>
         
         <h5 class="mb-3">Key Insights</h5>
-        <ul class="insight-list mb-4">
+        <!-- Skeleton loading for insights -->
+        <div class="skeleton-content">
+            <div class="skeleton skeleton-list-item"></div>
+            <div class="skeleton skeleton-list-item"></div>
+            <div class="skeleton skeleton-list-item"></div>
+        </div>
+        <ul class="insight-list mb-4 d-none">
             {% for insight in feedback.key_insights %}
             <li>
                 <i class="bi bi-lightbulb insight-icon text-primary"></i>
@@ -91,7 +227,13 @@
         </ul>
         
         <h5 class="mb-3">Recommendations</h5>
-        <ul class="insight-list mb-4">
+        <!-- Skeleton loading for recommendations -->
+        <div class="skeleton-content">
+            <div class="skeleton skeleton-list-item"></div>
+            <div class="skeleton skeleton-list-item"></div>
+            <div class="skeleton skeleton-list-item"></div>
+        </div>
+        <ul class="insight-list mb-4 d-none">
             {% for rec in feedback.recommendations %}
             <li>
                 <i class="bi bi-check-circle insight-icon text-success"></i>
@@ -100,7 +242,9 @@
             {% endfor %}
         </ul>
         
-        <div class="motivation-quote">
+        <!-- Skeleton loading for motivation quote -->
+        <div class="skeleton skeleton-quote"></div>
+        <div class="motivation-quote d-none">
             <i class="bi bi-quote"></i> {{ feedback.motivation }}
         </div>
     </div>
@@ -249,12 +393,12 @@
         </div>
     </div>
 
-    <!-- Activity Tracker Card -->
+    <!-- Activity Tracker Card with GitHub style -->
     <div class="bento-card">
         <h4 class="mb-4">Activity Tracker</h4>
         <div class="activity-grid">
-            {% set activity_data = get_activity_data(user.id) %}
             <div class="activity-calendar">
+                {% set activity_data = get_activity_data(user.id) %}
                 {% for week in activity_data %}
                 <div class="activity-week">
                     {% for day in week %}
@@ -262,18 +406,18 @@
                          data-date="{{ day.date }}"
                          data-count="{{ day.count }}"
                          style="background-color: {{ get_activity_color(day.count) }}">
-                        <span class="activity-tooltip">
+                        <div class="activity-tooltip">
                             {{ day.count }} scans on {{ day.date }}
-                        </span>
+                        </div>
                     </div>
                     {% endfor %}
                 </div>
                 {% endfor %}
             </div>
-            <div class="activity-legend mt-2">
+            <div class="activity-legend mt-3">
                 <span>Less</span>
-                {% for level in range(5) %}
-                <div class="activity-level" style="background-color: {{ get_activity_color(level) }}"></div>
+                {% for count in [0, 2, 4, 6, 8] %}
+                <div class="activity-level" style="background-color: {{ get_activity_color(count) }}"></div>
                 {% endfor %}
                 <span>More</span>
             </div>
@@ -326,5 +470,49 @@ setInterval(refreshNutritionData, 60000);
 
 // Initial refresh
 refreshNutritionData();
+
+// Function to show elements with delay
+function showWithDelay(element, delay) {
+    setTimeout(() => {
+        element.classList.add('show');
+    }, delay);
+}
+
+// Function to show real content and hide skeletons
+function showAIInsights() {
+    const card = document.getElementById('aiInsightsCard');
+    
+    // Show skeletons with delays
+    card.querySelectorAll('.skeleton').forEach((el, index) => {
+        showWithDelay(el, index * 200);
+    });
+
+    // After skeletons are shown, replace with real content
+    setTimeout(() => {
+        // Hide skeletons one by one
+        card.querySelectorAll('.skeleton-content').forEach((el, index) => {
+            setTimeout(() => {
+                el.style.opacity = '0';
+                setTimeout(() => {
+                    el.style.display = 'none';
+                }, 500);
+            }, index * 200);
+        });
+
+        // Show real content one by one
+        card.querySelectorAll('.d-none').forEach((el, index) => {
+            setTimeout(() => {
+                el.classList.remove('d-none');
+                el.classList.add('content-item');
+                requestAnimationFrame(() => {
+                    showWithDelay(el, 100);
+                });
+            }, index * 200 + 500);
+        });
+    }, 2000);
+}
+
+// Start the loading animation immediately
+showAIInsights();
 </script>
 {% endblock %} 
