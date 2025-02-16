@@ -100,13 +100,14 @@ def add_scan_record(user_id, food_name, nutrition_data, image_path=None):
     conn.commit()
     conn.close()
 
-def get_scan_records(page=1, per_page=10):
+def get_scan_records(page=1, per_page=10, user_id=None):
     """
     Get paginated scan records.
     
     Args:
         page (int): Page number (1-based)
         per_page (int): Number of records per page
+        user_id (int): Optional user ID to filter records
     
     Returns:
         tuple: (records, total_pages, total_records)
@@ -115,7 +116,10 @@ def get_scan_records(page=1, per_page=10):
     cur = conn.cursor()
     
     # Get total count
-    cur.execute("SELECT COUNT(*) FROM scanned_items")
+    if user_id is not None:
+        cur.execute("SELECT COUNT(*) FROM scanned_items WHERE user_id = ?", (user_id,))
+    else:
+        cur.execute("SELECT COUNT(*) FROM scanned_items")
     total_records = cur.fetchone()[0]
     
     # Calculate total pages
@@ -123,12 +127,21 @@ def get_scan_records(page=1, per_page=10):
     
     # Get paginated records
     offset = (page - 1) * per_page
-    cur.execute("""
-        SELECT id, timestamp, food_name, total_cal, potassium, protein, total_carbs, total_fat, image_path
-        FROM scanned_items 
-        ORDER BY timestamp DESC
-        LIMIT ? OFFSET ?
-    """, (per_page, offset))
+    if user_id is not None:
+        cur.execute("""
+            SELECT id, timestamp, food_name, total_cal, potassium, protein, total_carbs, total_fat, image_path
+            FROM scanned_items 
+            WHERE user_id = ?
+            ORDER BY timestamp DESC
+            LIMIT ? OFFSET ?
+        """, (user_id, per_page, offset))
+    else:
+        cur.execute("""
+            SELECT id, timestamp, food_name, total_cal, potassium, protein, total_carbs, total_fat, image_path
+            FROM scanned_items 
+            ORDER BY timestamp DESC
+            LIMIT ? OFFSET ?
+        """, (per_page, offset))
     
     records = cur.fetchall()
     conn.close()
