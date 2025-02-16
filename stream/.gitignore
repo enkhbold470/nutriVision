@@ -1,5 +1,20 @@
 .env
 capture_images/*.jpg
+capture_images/*.png
+capture_images/*.jpeg
+capture_images/*.webp
 *.db
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+*.pywz
+*.pyc~
+*.pyo~
+*.pyd~
+*.pyw~
+*.pyz~
+*.pywz~
 

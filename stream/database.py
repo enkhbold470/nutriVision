@@ -1,35 +1,49 @@
-import sqlite3
 import os
+import psycopg2
+from psycopg2.extras import DictCursor
 from datetime import datetime
 from werkzeug.security import generate_password_hash
 from dotenv import load_dotenv
 from flask import g
 
+from utils import calculate_bmr, calculate_daily_calories, calculate_daily_protein
 # Load environment variables
 load_dotenv()
 
 # Database configuration
-DATABASE_NAME = "nutrition_data.db"
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT = os.getenv("DB_PORT", "5432")
+DB_NAME = os.getenv("DB_NAME", "postgres")
+DB_USER = os.getenv("DB_USER", "postgres")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "mysecretpassword")
 
 def get_db_connection():
     """Create a database connection and return the connection and cursor."""
-    conn = sqlite3.connect(DATABASE_NAME)
-    conn.row_factory = sqlite3.Row  # This enables column access by name: row['column_name']
-    return conn
+    try:
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            port=DB_PORT,
+            dbname=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            cursor_factory=DictCursor
+        )
+        return conn
+    except psycopg2.OperationalError as e:
+        print(f"Could not connect to database: {str(e)}")
+        print("\nIf you're running locally, make sure PostgreSQL is installed and running.")
+        print("You can also use Docker Compose with: docker-compose up --build")
+        raise
 
 def init_db():
     """Initialize the database with required tables."""
     conn = get_db_connection()
     cur = conn.cursor()
 
-    # Drop existing tables to recreate with new schema
-    cur.execute('DROP TABLE IF EXISTS scanned_items')
-    cur.execute('DROP TABLE IF EXISTS users')
-
-    # Create users table
+    # Create users table if it doesn't exist
     cur.execute('''
     CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         username TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
         age INTEGER NOT NULL,
@@ -38,7 +52,7 @@ def init_db():
         gender TEXT NOT NULL,
         height INTEGER NOT NULL,
         goal INTEGER NOT NULL,
-        target_date DATETIME NOT NULL,
+        target_date TIMESTAMP NOT NULL,
         calories INTEGER NOT NULL,
         potassium INTEGER NOT NULL,
         protein INTEGER NOT NULL,
@@ -46,15 +60,15 @@ def init_db():
         total_fat INTEGER NOT NULL,
         max_daily_calories INTEGER NOT NULL,
         max_daily_protein INTEGER NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
 
-    # Create scanned_items table with user_id reference
+    # Create scanned_items table if it doesn't exist
     cur.execute('''
     CREATE TABLE IF NOT EXISTS scanned_items (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         food_name TEXT NOT NULL,
         total_cal REAL,
         potassium REAL,
@@ -65,7 +79,7 @@ def init_db():
         FOREIGN KEY(user_id) REFERENCES users(id)
     )''')
 
-    # Create indexes
+    # Create indexes if they don't exist
     cur.execute('CREATE INDEX IF NOT EXISTS idx_timestamp ON scanned_items(timestamp DESC)')
     cur.execute('CREATE INDEX IF NOT EXISTS idx_username ON users(username)')
     cur.execute('CREATE INDEX IF NOT EXISTS idx_user_id ON scanned_items(user_id)')
@@ -89,7 +103,7 @@ def add_scan_record(user_id, food_name, nutrition_data, image_path=None):
     cur.execute('''
     INSERT INTO scanned_items 
     (user_id, food_name, total_cal, potassium, protein, total_carbs, total_fat, image_path, timestamp)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
     ''', (
         user_id,
         food_name,
@@ -99,7 +113,7 @@ def add_scan_record(user_id, food_name, nutrition_data, image_path=None):
         nutrition_data.get('total_carbs', 0),
         nutrition_data.get('total_fat', 0),
         image_path,
-        datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        datetime.now()
     ))
     
     conn.commit()
@@ -122,7 +136,7 @@ def get_scan_records(page=1, per_page=10, user_id=None):
     
     # Get total count
     if user_id is not None:
-        cur.execute("SELECT COUNT(*) FROM scanned_items WHERE user_id = ?", (user_id,))
+        cur.execute("SELECT COUNT(*) FROM scanned_items WHERE user_id = %s", (user_id,))
     else:
         cur.execute("SELECT COUNT(*) FROM scanned_items")
     total_records = cur.fetchone()[0]
@@ -136,16 +150,16 @@ def get_scan_records(page=1, per_page=10, user_id=None):
         cur.execute("""
             SELECT id, timestamp, food_name, total_cal, potassium, protein, total_carbs, total_fat, image_path
             FROM scanned_items 
-            WHERE user_id = ?
+            WHERE user_id = %s
             ORDER BY timestamp DESC
-            LIMIT ? OFFSET ?
+            LIMIT %s OFFSET %s
         """, (user_id, per_page, offset))
     else:
         cur.execute("""
             SELECT id, timestamp, food_name, total_cal, potassium, protein, total_carbs, total_fat, image_path
             FROM scanned_items 
             ORDER BY timestamp DESC
-            LIMIT ? OFFSET ?
+            LIMIT %s OFFSET %s
         """, (per_page, offset))
     
     records = cur.fetchall()
@@ -167,16 +181,16 @@ def search_records(search_term, date_filter=None):
     conn = get_db_connection()
     cur = conn.cursor()
     
-    query = "SELECT * FROM scanned_items WHERE food_name LIKE ?"
+    query = "SELECT * FROM scanned_items WHERE food_name ILIKE %s"
     params = [f"%{search_term}%"]
     
     if date_filter:
         if date_filter == 'today':
-            query += " AND date(timestamp) = date('now')"
+            query += " AND date(timestamp) = current_date"
         elif date_filter == 'week':
-            query += " AND timestamp >= datetime('now', '-7 days')"
+            query += " AND timestamp >= current_date - interval '7 days'"
         elif date_filter == 'month':
-            query += " AND timestamp >= datetime('now', '-1 month')"
+            query += " AND timestamp >= current_date - interval '1 month'"
     
     query += " ORDER BY timestamp DESC"
     
@@ -204,16 +218,18 @@ def create_user(username, password, age, weight, target_weight, gender, height, 
             username, password, age, weight, target_weight, gender, height, goal, target_date,
             calories, potassium, protein, carbs, total_fat,
             max_daily_calories, max_daily_protein
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING id
         ''', (
             username, hashed_password, age, weight, target_weight, gender, height, goal, target_date,
             0, 0, 0, 0, 0,  # Initial daily values
             max_daily_calories, max_daily_protein
         ))
         
+        user_id = cur.fetchone()[0]
         conn.commit()
-        return cur.lastrowid
-    except sqlite3.IntegrityError:
+        return user_id
+    except psycopg2.IntegrityError:
         return None
     finally:
         conn.close()
@@ -231,6 +247,8 @@ def close_db(e=None):
         db.close()
 
 # Initialize the database when this module is imported
-if not os.path.exists(DATABASE_NAME):
-    print(f"Initializing database: {DATABASE_NAME}")
-    init_db() 
+try:
+    init_db()
+    print("Database initialized successfully")
+except Exception as e:
+    print(f"Error initializing database: {str(e)}") 
