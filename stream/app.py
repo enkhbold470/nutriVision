@@ -9,9 +9,10 @@ import json
 from dotenv import load_dotenv
 import threading
 from threading import Lock
+from datetime import datetime, timedelta
 from database import init_db, add_scan_record, get_scan_records, search_records, get_db_connection, get_db, close_db
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, timedelta
+from utils import calculate_bmr, calculate_daily_calories, calculate_daily_protein
 
 # Load environment variables
 load_dotenv()
@@ -38,10 +39,10 @@ def get_user_achievements(user_id):
     # Get user's scan count and other stats
     cur.execute('''
         SELECT COUNT(*) as scan_count,
-               COUNT(DISTINCT date(timestamp)) as active_days,
+               COUNT(DISTINCT DATE(timestamp)) as active_days,
                COUNT(DISTINCT food_name) as unique_foods
         FROM scanned_items 
-        WHERE user_id = ?
+        WHERE user_id = %s
     ''', (user_id,))
     stats = cur.fetchone()
     conn.close()
@@ -67,7 +68,7 @@ def get_user_achievements(user_id):
             'unlocked': stats['active_days'] >= 7
         },
         {
-            'title': 'Nutrition Master',
+            'title': 'Nutrition Master',    
             'description': 'Complete 100 food scans',
             'icon': 'bi-trophy',
             'unlocked': stats['scan_count'] >= 100
@@ -82,11 +83,11 @@ def get_activity_data(user_id):
     
     # Get daily scan counts for the last year
     cur.execute('''
-        SELECT date(timestamp) as date, COUNT(*) as count
+        SELECT DATE(timestamp) as date, COUNT(*) as count
         FROM scanned_items 
-        WHERE user_id = ? 
-        AND timestamp >= date('now', '-1 year')
-        GROUP BY date(timestamp)
+        WHERE user_id = %s 
+        AND timestamp >= CURRENT_DATE - INTERVAL '1 year'
+        GROUP BY DATE(timestamp)
         ORDER BY date
     ''', (user_id,))
     
@@ -425,7 +426,7 @@ def create_user(username, password, age, weight, target_weight, gender, height, 
     
     try:
         # Check if username exists
-        cur.execute('SELECT id FROM users WHERE username = ?', (username,))
+        cur.execute('SELECT id FROM users WHERE username = %s', (username,))
         if cur.fetchone():
             return None
             
@@ -443,46 +444,20 @@ def create_user(username, password, age, weight, target_weight, gender, height, 
                 username, password, age, weight, target_weight, gender, height, goal, target_date,
                 calories, potassium, protein, carbs, total_fat,
                 max_daily_calories, max_daily_protein
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
         ''', (
             username, hashed_password, age, weight, target_weight, gender, height, goal, target_date,
             0, 0, 0, 0, 0,  # Initial daily totals
             max_daily_calories, max_daily_protein  # Calculated targets
         ))
         
+        user_id = cur.fetchone()[0]
         conn.commit()
-        return cur.lastrowid
+        return user_id
     finally:
         conn.close()
 
-def calculate_bmr(weight, height, age, gender):
-    """Calculate Basal Metabolic Rate using Mifflin-St Jeor Equation."""
-    if gender.lower() == 'male':
-        return (10 * weight) + (6.25 * height) - (5 * age) + 5
-    else:
-        return (10 * weight) + (6.25 * height) - (5 * age) - 161
-
-def calculate_daily_calories(bmr, goal):
-    """Calculate daily calorie needs based on goal."""
-    # goal: 1 = lose weight, 2 = maintain, 3 = gain weight
-    activity_factor = 1.375  # Assumes light activity
-    maintenance = bmr * activity_factor
-    
-    if goal == 1:  # Lose weight
-        return int(maintenance - 500)
-    elif goal == 2:  # Maintain weight
-        return int(maintenance)
-    else:  # Gain weight
-        return int(maintenance + 500)
-
-def calculate_daily_protein(weight, goal):
-    """Calculate daily protein needs in grams."""
-    if goal == 1:  # Lose weight
-        return int(weight * 2.2)  # 2.2g per kg of body weight
-    elif goal == 2:  # Maintain weight
-        return int(weight * 1.8)  # 1.8g per kg of body weight
-    else:  # Gain weight
-        return int(weight * 2.4)  # 2.4g per kg of body weight
 
 @app.route("/login", methods=['GET', 'POST'])
 def login():
@@ -495,7 +470,7 @@ def login():
         
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute('SELECT * FROM users WHERE username = ?', (username,))
+        cur.execute('SELECT * FROM users WHERE username = %s', (username,))
         user_data = cur.fetchone()
         conn.close()
         
@@ -520,23 +495,30 @@ def get_personalized_feedback(user):
     """Get AI-driven personalized feedback based on user's data and progress."""
     try:
         # Get user's recent activity
-        db = get_db()
-        recent_activity = db.execute('''
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute('''
             SELECT 
                 COUNT(*) as scan_count,
-                AVG(total_cal) as avg_calories,
-                AVG(protein) as avg_protein,
-                AVG(total_carbs) as avg_carbs,
-                AVG(total_fat) as avg_fat
+                STRING_AGG(food_name, ',') as foods,
+                ROUND(AVG(total_cal)::numeric, 1) as avg_calories,
+                ROUND(AVG(protein)::numeric, 1) as avg_protein,
+                ROUND(AVG(total_carbs)::numeric, 1) as avg_carbs,
+                ROUND(AVG(total_fat)::numeric, 1) as avg_fat
             FROM scanned_items 
-            WHERE user_id = ? 
-            AND timestamp >= date('now', '-7 days')
-        ''', (user.id,)).fetchone()
+            WHERE user_id = %s 
+            AND timestamp >= CURRENT_DATE - INTERVAL '7 days'
+        ''', (user.id,))
+        recent_activity = cur.fetchone()
+        conn.close()
 
         # Calculate progress towards goal
         days_remaining = (datetime.strptime(user.data['target_date'], '%Y-%m-%d') - datetime.now()).days
         weight_diff = abs(user.data['weight'] - user.data['target_weight'])
         daily_change_needed = weight_diff / max(1, days_remaining) if days_remaining > 0 else 0
+
+        # Get list of recent foods
+        recent_foods = recent_activity['foods'].split(',') if recent_activity['foods'] else []
 
         # Prepare context for AI
         context = {
@@ -552,20 +534,22 @@ def get_personalized_feedback(user):
             },
             "recent_activity": {
                 "scans_last_7_days": recent_activity['scan_count'],
-                "avg_daily_calories": recent_activity['avg_calories'],
-                "avg_daily_protein": recent_activity['avg_protein'],
-                "avg_daily_carbs": recent_activity['avg_carbs'],
-                "avg_daily_fat": recent_activity['avg_fat']
+                "recent_foods": recent_foods[-5:],  # Last 5 foods
+                "avg_daily_calories": round(recent_activity['avg_calories'] or 0, 1),
+                "avg_daily_protein": round(recent_activity['avg_protein'] or 0, 1),
+                "avg_daily_carbs": round(recent_activity['avg_carbs'] or 0, 1),
+                "avg_daily_fat": round(recent_activity['avg_fat'] or 0, 1)
             },
             "targets": {
                 "daily_calories": user.data['max_daily_calories'],
                 "daily_protein": user.data['max_daily_protein']
             }
         }
+        print(f"[DEBUG] Context: {context}")
 
         # Get AI insights
         response = perplexity_client.chat.completions.create(
-            model="sonar-pro",
+            model="sonar",
             messages=[
                 {
                     "role": "system",
@@ -613,20 +597,24 @@ def profile():
     print("[DEBUG] Accessing profile page")
     
     # Get today's nutrition totals for the user
-    db = get_db()
+    conn = get_db()
+    cur = conn.cursor()
     
     # Get today's totals with proper rounding and type conversion
-    totals = db.execute('''
+    cur.execute('''
         SELECT 
-            ROUND(COALESCE(SUM(total_cal), 0), 1) as calories,
-            ROUND(COALESCE(SUM(potassium), 0), 1) as potassium,
-            ROUND(COALESCE(SUM(protein), 0), 1) as protein,
-            ROUND(COALESCE(SUM(total_carbs), 0), 1) as carbs,
-            ROUND(COALESCE(SUM(total_fat), 0), 1) as total_fat
+            ROUND(COALESCE(SUM(total_cal), 0)::numeric, 1) as calories,
+            ROUND(COALESCE(SUM(potassium), 0)::numeric, 1) as potassium,
+            ROUND(COALESCE(SUM(protein), 0)::numeric, 1) as protein,
+            ROUND(COALESCE(SUM(total_carbs), 0)::numeric, 1) as carbs,
+            ROUND(COALESCE(SUM(total_fat), 0)::numeric, 1) as total_fat
         FROM scanned_items 
-        WHERE user_id = ? 
-        AND date(timestamp) = date('now', 'localtime')
-    ''', (current_user.id,)).fetchone()
+        WHERE user_id = %s 
+        AND DATE(timestamp) = CURRENT_DATE
+    ''', (current_user.id,))
+    
+    totals = cur.fetchone()
+    conn.close()
     
     # Convert SQLite Row to dictionary with proper float values
     totals_dict = {
@@ -661,8 +649,8 @@ def get_nutrition_data():
             COALESCE(SUM(total_carbs), 0) as carbs,
             COALESCE(SUM(total_fat), 0) as total_fat
         FROM scanned_items 
-        WHERE user_id = ? 
-        AND date(timestamp) = date('now')
+        WHERE user_id = %s 
+        AND DATE(timestamp) = CURRENT_DATE
     ''', (current_user.id,))
     
     totals = dict(cur.fetchone())
@@ -681,6 +669,9 @@ class User:
     def __init__(self, user_data):
         self.id = user_data['id']
         self.username = user_data['username']
+        # Format target_date if it's a datetime object
+        if isinstance(user_data['target_date'], datetime):
+            user_data['target_date'] = user_data['target_date'].strftime('%Y-%m-%d')
         self.data = user_data
         self.is_authenticated = True
         self.is_active = True
@@ -693,7 +684,7 @@ class User:
 def load_user(user_id):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('SELECT * FROM users WHERE id = ?', (user_id,))
+    cur.execute('SELECT * FROM users WHERE id = %s', (user_id,))
     user_data = cur.fetchone()
     conn.close()
     
