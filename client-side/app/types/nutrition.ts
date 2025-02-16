@@ -1,10 +1,12 @@
 // app/types/nutrition.ts
+export interface FoodItem {
+  name: string;
+  nutrition: NutritionInfo;
+}
 export interface NutritionInfo {
-    totalCalories: number;
-    potassium: number;
-    protein: number;
-    totalCarbs: number;
-    totalTransFat: number;
-    saturatedFat: number;
-  }
-  
+  total_cal: number;
+  potassium: number;
+  protein: number;
+  total_carbs: number;
+  total_fat: number;
+}

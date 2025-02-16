@@ -86,7 +86,7 @@ const CameraDevicesProvider = (props: Props) => {
 
     useEffect(() => {
         loadCameraDeviceList();
-        if (navigator) {
+        if (navigator.mediaDevices && 'ondevicechange' in navigator.mediaDevices) {
             navigator.mediaDevices.ondevicechange = (event: Event) => {
                 loadCameraDeviceList();
             };
