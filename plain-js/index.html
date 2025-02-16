@@ -4,33 +4,43 @@
     <title>YOLO Object Detection</title>
     <style>
         .container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 20px;
-        }
-        #video {
-            border: 1px solid #999;
+            position: relative;
             width: 640px;
-            height: 480px;
+            height: 640px;
+            border: 1px solid #000; 
         }
-        #canvas {
+
+        .video, .canvas {
             position: absolute;
-            border: 1px solid #999;
+            top: 0;
+            left: 0;
+            width: 640px;
+            height: 640px;
         }
+
+        .video {
+            z-index: 2;
+            border: 1px solid red;
+        }
+
+        .canvas {
+            z-index: 4;
+            border: 1px solid green;
+        }
+
     </style>
 </head>
 <body>
     <div class="container">
         <h1>YOLO Object Detection</h1>
-        <div style="position: relative;">
-            <video id="video" autoplay></video>
-            <canvas id="canvas"></canvas>
-        </div>
+        <div class="container">
+            <video class="video" id="video" autoplay></video>
+            <canvas class="canvas" id="canvas"></canvas>
+        </div>        
         <div id="loading">Loading YOLO model...</div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tensorflow/4.2.0/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
     <script>
         let model;
         const video = document.getElementById('video');
@@ -38,126 +48,162 @@
         const ctx = canvas.getContext('2d');
         const loading = document.getElementById('loading');
 
-        // Initialize the camera
+        const modelPath = "model.onnx";
+
         async function setupCamera() {
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: { width: 640, height: 480 },
+                video: { width: 640, height: 640 },
                 audio: false
             });
             video.srcObject = stream;
 
             return new Promise((resolve) => {
                 video.onloadedmetadata = () => {
-                    canvas.width = video.width;
-                    canvas.height = video.height;
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
                     resolve(video);
                 };
             });
         }
 
-        // Load the YOLO TFLite model
-        async function loadModel() {
-            try {
-                model = await tf.loadGraphModel('./model.json');
-                loading.style.display = 'none';
-                // Start detecting frames after the model is loaded
-                detectFrame();
-            } catch (error) {
-                console.error('Error loading the model:', error);
-                loading.textContent = 'Error loading the model';
+        function preprocessImage(imageData) {
+            const { data } = imageData;
+            const floatArray = new Float32Array(3 * 640 * 640);
+
+            for (let i = 0; i < data.length; i += 4) {
+                let j = i / 4;
+                floatArray[j] = data[i] / 255.0;
+                floatArray[j + 640 * 640] = data[i+1] / 255.0;
+                floatArray[j + 2 * 640 * 640] = data[i+2] / 255.0;
             }
+
+            return new ort.Tensor('float32', floatArray, [1, 3, 640, 640]);
         }
 
-        // Perform detection on the video frame
-        async function detectFrame() {
-            tf.engine().startScope();
-            
-            // Convert video frame to tensor
-            const videoFrame = tf.browser.fromPixels(video);
-            const resized = tf.image.resizeBilinear(videoFrame, [640, 640]); // YOLO input size
-            const normalized = resized.div(255.0);
-            const batched = normalized.expandDims(0);
-            const input = batched.transpose([0, 3, 1, 2]);
+        function tensorToImage(tensor) {
+            const floatArray = tensor.data;
+            const imageArray = new Uint8Array(4 * 640 * 640);  // RGB format (3 channels)
 
-            // Run inference
-            const predictions = model.predict(input);
-            
-            // Clear previous drawings
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            // console.log(predictions);
+            for (let i = 0; i < 640 * 640; i++) {
+                imageArray[4*i] = Math.min(255, Math.max(0, floatArray[i] * 255));         // Red channel
+                imageArray[4*i + 1] = Math.min(255, Math.max(0, floatArray[i + 640 * 640] * 255)); // Green channel
+                imageArray[4*i + 2 ] = Math.min(255, Math.max(0, floatArray[i + 2 * 640 * 640] * 255)); // Blue channel
+                imageArray[4*i + 3] = 255;  // Alpha channel
+            }
 
-            const predictionsTensor = predictions;
+            // Create a Blob from the image array (as PNG)
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 640;
+            canvas.height = 640;
 
-            // Extract bounding boxes and class probabilities
-            const boundingBoxes = predictionsTensor.slice([0, 0, 0], [1, 84, 4]); // Assuming 4 values for each box (x_min, y_min, x_max, y_max)
-            const classProbabilities = predictionsTensor.slice([0, 0, 4], [1, 84, 80]); // Assuming 80 class probabilities
+            const imageData = new ImageData(new Uint8ClampedArray(imageArray), 640, 640);
+            ctx.putImageData(imageData, 0, 0);
 
-            // Convert bounding boxes and probabilities to arrays
-            const boundingBoxesArray = await boundingBoxes.array();
-            const classProbabilitiesArray = await classProbabilities.array();
+            // Convert canvas to data URL (PNG format)
+            const dataUrl = canvas.toDataURL('image/png');
 
-            // Example: Get box coordinates for the first detected object
-            const firstBoundingBox = boundingBoxesArray[0][0];  // This should give [x_min, y_min, x_max, y_max]
-            // console.log("Bounding Box for first object:", firstBoundingBox);
+            // Create a link element to trigger the download
+            const link = document.createElement('a');
+            link.href = dataUrl;
+            link.download = 'image.png';  // File name for the download
+            link.click();  // Start the download
+        }
 
-            // Get class probabilities for the first object
-            const firstClassProbabilities = classProbabilitiesArray[0][0];
-            // console.log("Class Probabilities for first object:", firstClassProbabilities);
+        function processPredictions(predictionsTensor) {
+            const predictionsArray = predictionsTensor.data;
+            // console.log('Predictions Array:', predictionsArray);  // 打印预测数组
 
-            const threshold = 0.5;
-
+            const numBoxes = 8400;
+            const threshold = 0.6;
             const filteredBoxes = [];
-            for (let i = 0; i < boundingBoxesArray[0].length; i++) {
-                const box = boundingBoxesArray[0][i];
-                const scores = classProbabilitiesArray[0][i];
-                const maxScore = Math.max(...scores);  // Max confidence score
-                if (maxScore > threshold) {
+
+            for (let i = 0; i < numBoxes; i++) {
+                // const boxOffset = i * 5;
+                // const box = predictionsArray.slice(boxOffset, boxOffset + 4);
+                // const score = sigmoid(predictionsArray[boxOffset + 4]);
+                const xc = predictionsArray[i]
+                const yc = predictionsArray[i + numBoxes]
+                const w = predictionsArray[i + 2 * numBoxes]
+                const h = predictionsArray[i + 3 * numBoxes]
+                const box = [xc - w / 2, yc - h / 2, xc + w / 2, yc + h / 2];
+                const score = predictionsArray[i + 4 * numBoxes];
+
+                if (score > threshold) {
+                    // console.log('Box:', box, 'Score:', score);
                     filteredBoxes.push({
-                        box: box,  // [x_min, y_min, x_max, y_max]
-                        score: maxScore,
-                        class: scores.indexOf(maxScore) // The class with the highest score
+                        box: box,
+                        score: score,
+                        class: 0,
                     });
                 }
             }
-            console.log("Filtered Boxes:", filteredBoxes);
 
-            // Process and draw predictions
-            // const [boxes, scores, classes] = predictions;
-            // const validDetections = await predictions[3].data();
-
-            // for (let i = 0; i < validDetections[0]; i++) {
-            //     const [x1, y1, x2, y2] = boxes.arraySync()[0][i];
-            //     const score = scores.arraySync()[0][i];
-            //     const classId = classes.arraySync()[0][i];
-
-            //     if (score > 0.5) { // Confidence threshold
-            //         // Convert normalized coordinates to pixel values
-            //         const x = x1 * canvas.width;
-            //         const y = y1 * canvas.height;
-            //         const width = (x2 - x1) * canvas.width;
-            //         const height = (y2 - y1) * canvas.height;
-
-            //         // Draw bounding box
-            //         ctx.strokeStyle = '#00ff00';
-            //         ctx.lineWidth = 2;
-            //         ctx.strokeRect(x, y, width, height);
-
-            //         // Draw label
-            //         ctx.fillStyle = '#00ff00';
-            //         ctx.font = '16px Arial';
-            //         ctx.fillText(`${classId} ${Math.round(score * 100)}%`, x, y - 5);
-            //     }
-            // }
-
-            tf.engine().endScope();
-            requestAnimationFrame(detectFrame);
+            return filteredBoxes;
         }
 
-        // Initialize the application
+        function drawBoundingBoxes(boxes) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            boxes.forEach((box) => {
+                const [x, y, width, height] = box.box;
+                ctx.strokeStyle = "red";
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x , y , width , height);
+                ctx.fillStyle = "red";
+                ctx.font = "16px Arial";
+                ctx.fillText(`${box.class} ${box.score.toFixed(2)}`, x , y - 10);
+            });
+        }
+
+        async function loadONNXModel(modelPath) {
+            return await ort.InferenceSession.create(modelPath);
+        }
+
+        // 进行 ONNX 推理
+        async function runONNXInference(video, session) {
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = 640;
+            tempCanvas.height = 640;
+
+            tempCtx.drawImage(video, 0, 0, 640, 640);
+            const imageData = tempCtx.getImageData(0, 0, 640, 640);
+
+            // const temptempcanvas = document.createElement('canvas');
+            // const temptempctx = temptempcanvas.getContext('2d');
+            // temptempcanvas.width = 640;
+            // temptempcanvas.height = 640;
+            // temptempctx.putImageData(imageData, 0, 0);
+
+            // const dataUrl = temptempcanvas.toDataURL('image/png');
+            // const link = document.createElement('a');
+            // link.href = dataUrl;
+            // link.download = 'image.png';  // Filename for download
+            // link.click();
+
+            const inputTensor = preprocessImage(imageData);
+
+            const feeds = { 'images': inputTensor };
+            const results = await session.run(feeds);
+
+            const predictionsTensor = results.output0;
+            // console.log(predictionsTensor);
+            const filteredBoxes = processPredictions(predictionsTensor);
+            console.log(filteredBoxes);
+
+            return filteredBoxes;
+        }
+
         async function init() {
             await setupCamera();
-            await loadModel();
-            detectFrame();
+            model = await loadONNXModel(modelPath);
+            loading.innerText = "YOLO model loaded!";
+            const session = await loadONNXModel(modelPath);
+            while (true) {
+                const boxes = await runONNXInference(video, session);
+                drawBoundingBoxes(boxes);
+                await new Promise(resolve => setTimeout(resolve, 1000 / 30));  // ~30 FPS
+            }
         }
 
         init();
