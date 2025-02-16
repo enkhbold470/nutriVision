@@ -2,3 +2,4 @@
 capture_images/*.jpg
 *.db
 __pycache__/
+
