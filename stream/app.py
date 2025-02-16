@@ -13,6 +13,8 @@ from datetime import datetime, timedelta
 from database import init_db, add_scan_record, get_scan_records, search_records, get_db_connection, get_db, close_db
 from werkzeug.security import generate_password_hash, check_password_hash
 from utils import calculate_bmr, calculate_daily_calories, calculate_daily_protein
+from ultralytics import YOLO
+import numpy as np
 
 # Load environment variables
 load_dotenv()
@@ -168,7 +170,17 @@ class VideoCamera:
         self.camera = cv2.VideoCapture(0)
         self.lock = Lock()
         self.frame = None
+        self.detections = None
         self.stopped = False
+        
+        # Initialize YOLO model
+        print("[DEBUG] Loading YOLO model")
+        try:
+            self.model = YOLO('yolo11n_food_2.pt')  # Load the model
+            print("[DEBUG] YOLO model loaded successfully")
+        except Exception as e:
+            print(f"[DEBUG] Error loading YOLO model: {str(e)}")
+            self.model = None
         
         # Start frame capture thread
         self.thread = threading.Thread(target=self._capture_loop)
@@ -181,13 +193,57 @@ class VideoCamera:
         while not self.stopped:
             success, frame = self.camera.read()
             if success:
-                with self.lock:
-                    self.frame = frame
+                # Run YOLO detection
+                if self.model is not None:
+                    try:
+                        results = self.model(frame, conf=0.5)  # Run inference with confidence threshold
+                        
+                        # Draw bounding boxes and labels
+                        annotated_frame = frame.copy()
+                        for r in results:
+                            boxes = r.boxes
+                            for box in boxes:
+                                # Get box coordinates
+                                x1, y1, x2, y2 = box.xyxy[0]
+                                x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+                                
+                                # Get class name and confidence
+                                cls = int(box.cls[0])
+                                conf = float(box.conf[0])
+                                name = self.model.names[cls]
+                                
+                                # Only show food-related detections
+                                # if name in ['pizza', 'sandwich', 'hot dog', 'carrot', 'banana', 'apple', 'orange', 
+                                #           'broccoli', 'donut', 'cake', 'bowl', 'dining table']:
+                                # Draw bounding box
+                                cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                                
+                                # Add label with confidence
+                                label = f'{name} {conf:.2f}'
+                                cv2.putText(annotated_frame, label, (x1, y1 - 10), 
+                                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                        
+                        with self.lock:
+                            self.frame = annotated_frame
+                            self.detections = results
+                    except Exception as e:
+                        print(f"[DEBUG] Error in YOLO detection: {str(e)}")
+                        with self.lock:
+                            self.frame = frame
+                else:
+                    with self.lock:
+                        self.frame = frame
     
     def get_frame(self):
         with self.lock:
             if self.frame is not None:
                 return self.frame.copy()
+            return None
+    
+    def get_detections(self):
+        with self.lock:
+            if self.detections is not None:
+                return self.detections
             return None
     
     def stop(self):

@@ -8,3 +8,6 @@ Flask-WTF==1.2.1
 Flask-SQLAlchemy==3.1.1
 Flask-Bcrypt==1.0.1
 opencv-python==4.9.0.80
+ultralytics==8.1.28
+torch==2.2.1
+torchvision==0.17.1
