@@ -22,12 +22,16 @@
                                 <strong>{{ user.data.age }} years</strong>
                             </li>
                             <li class="list-group-item d-flex justify-content-between">
-                                <span>Weight:</span>
-                                <strong>{{ user.data.weight }} kg</strong>
+                                <span>Current Weight:</span>
+                                <strong>{{ user.data.weight }} kg ({{ (user.data.weight * 2.20462)|round|int }} lbs)</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>Target Weight:</span>
+                                <strong>{{ user.data.target_weight|default(user.data.weight) }} kg ({{ (user.data.target_weight|default(user.data.weight) * 2.20462)|round|int }} lbs)</strong>
                             </li>
                             <li class="list-group-item d-flex justify-content-between">
                                 <span>Height:</span>
-                                <strong>{{ user.data.height }} cm</strong>
+                                <strong>{{ user.data.height }} cm ({{ (user.data.height / 2.54)|round|int }} in)</strong>
                             </li>
                             <li class="list-group-item d-flex justify-content-between">
                                 <span>Gender:</span>
@@ -62,6 +66,14 @@
                             <li class="list-group-item d-flex justify-content-between">
                                 <span>Daily Protein Target:</span>
                                 <strong>{{ user.data.max_daily_protein }} g</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>Weight Change:</span>
+                                {% set weight_diff = (user.data.target_weight|default(user.data.weight) - user.data.weight) %}
+                                {% set lbs_diff = (weight_diff * 2.20462)|round|int %}
+                                <strong class="{% if weight_diff < 0 %}text-danger{% elif weight_diff > 0 %}text-success{% else %}text-muted{% endif %}">
+                                    {{ weight_diff|round(1) }} kg ({{ lbs_diff }} lbs)
+                                </strong>
                             </li>
                         </ul>
                     </div>
@@ -130,6 +142,181 @@
                 </div>
             </div>
         </div>
+
+        <!-- Achievements Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4 class="mb-0">Achievements</h4>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    {% set achievements = get_user_achievements(user.id) %}
+                    {% for achievement in achievements %}
+                    <div class="col-md-4 col-lg-3">
+                        <div class="achievement-badge text-center p-3 {{ 'achieved' if achievement.unlocked else 'locked' }}">
+                            <div class="badge-icon mb-2">
+                                <i class="bi {{ achievement.icon }} fs-1"></i>
+                            </div>
+                            <h5 class="badge-title">{{ achievement.title }}</h5>
+                            <p class="badge-description small text-muted">{{ achievement.description }}</p>
+                            {% if achievement.unlocked %}
+                            <span class="badge bg-success">Unlocked</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Locked</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity Tracker -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4 class="mb-0">Activity Tracker</h4>
+            </div>
+            <div class="card-body">
+                <div class="activity-grid">
+                    {% set activity_data = get_activity_data(user.id) %}
+                    <div class="activity-calendar">
+                        {% for week in activity_data %}
+                        <div class="activity-week">
+                            {% for day in week %}
+                            <div class="activity-day" 
+                                 data-date="{{ day.date }}"
+                                 data-count="{{ day.count }}"
+                                 style="background-color: {{ get_activity_color(day.count) }}">
+                                <span class="activity-tooltip">
+                                    {{ day.count }} scans on {{ day.date }}
+                                </span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="activity-legend mt-2">
+                        <span>Less</span>
+                        {% for level in range(5) %}
+                        <div class="activity-level" style="background-color: {{ get_activity_color(level) }}"></div>
+                        {% endfor %}
+                        <span>More</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <style>
+            .achievement-badge {
+                border-radius: 8px;
+                border: 1px solid #dee2e6;
+                transition: transform 0.2s;
+            }
+            .achievement-badge:hover {
+                transform: translateY(-5px);
+            }
+            .achievement-badge.achieved {
+                border-color: #28a745;
+            }
+            .achievement-badge.locked {
+                opacity: 0.7;
+            }
+            .activity-grid {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+            .activity-calendar {
+                display: flex;
+                gap: 2px;
+            }
+            .activity-week {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+            }
+            .activity-day {
+                width: 10px;
+                height: 10px;
+                border-radius: 2px;
+                position: relative;
+            }
+            .activity-day:hover .activity-tooltip {
+                display: block;
+            }
+            .activity-tooltip {
+                display: none;
+                position: absolute;
+                background: #000;
+                color: #fff;
+                padding: 5px;
+                border-radius: 4px;
+                font-size: 12px;
+                bottom: 100%;
+                left: 50%;
+                transform: translateX(-50%);
+                white-space: nowrap;
+                z-index: 1;
+            }
+            .activity-legend {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                font-size: 12px;
+            }
+            .activity-level {
+                width: 10px;
+                height: 10px;
+                border-radius: 2px;
+            }
+        </style>
+
+        <div class="text-center">
+            <a href="{{ url_for('home') }}" class="btn btn-primary">
+                <i class="bi bi-camera"></i> Back to Scanner
+            </a>
+            <a href="{{ url_for('logs') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-clock-history"></i> View History
+            </a>
+        </div>
     </div>
 </div>
+
+<script>
+// Auto-refresh nutrition data every 60 seconds
+function refreshNutritionData() {
+    fetch('/get_nutrition_data')
+        .then(response => response.json())
+        .then(data => {
+            // Update progress bars
+            updateProgressBar('calories', data.calories, data.max_daily_calories);
+            updateProgressBar('protein', data.protein, data.max_daily_protein);
+            
+            // Update other nutrients
+            document.getElementById('potassium').textContent = Math.round(data.potassium);
+            document.getElementById('carbs').textContent = Math.round(data.carbs);
+            document.getElementById('total_fat').textContent = Math.round(data.total_fat);
+        })
+        .catch(error => console.error('Error refreshing nutrition data:', error));
+}
+
+function updateProgressBar(nutrient, value, max) {
+    const percent = Math.min((value / max * 100), 100);
+    const progressBar = document.querySelector(`#${nutrient}-progress .progress-bar`);
+    progressBar.style.width = `${percent}%`;
+    progressBar.textContent = `${Math.round(value)}/${max} ${nutrient === 'calories' ? 'kcal' : 'g'}`;
+    
+    if (percent > 100) {
+        progressBar.classList.add('bg-danger');
+    } else {
+        progressBar.classList.remove('bg-danger');
+    }
+}
+
+// Refresh every 60 seconds
+setInterval(refreshNutritionData, 60000);
+
+// Initial refresh
+refreshNutritionData();
+</script>
 {% endblock %} 
