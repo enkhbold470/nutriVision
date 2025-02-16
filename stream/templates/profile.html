@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - NutriVision{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow mb-4">
+            <div class="card-body">
+                <h2 class="card-title text-center mb-4">Your Profile</h2>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h4>Personal Information</h4>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>Username:</span>
+                                <strong>{{ user.username }}</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>Age:</span>
+                                <strong>{{ user.data.age }} years</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>Weight:</span>
+                                <strong>{{ user.data.weight }} kg</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>Height:</span>
+                                <strong>{{ user.data.height }} cm</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>Gender:</span>
+                                <strong>{{ user.data.gender|title }}</strong>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h4>Fitness Goals</h4>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>Goal:</span>
+                                <strong>
+                                    {% if user.data.goal == 1 %}
+                                        Lose Weight
+                                    {% elif user.data.goal == 2 %}
+                                        Maintain Weight
+                                    {% else %}
+                                        Gain Weight
+                                    {% endif %}
+                                </strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>Target Date:</span>
+                                <strong>{{ user.data.target_date[:10] }}</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>Daily Calorie Target:</span>
+                                <strong>{{ user.data.max_daily_calories }} kcal</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>Daily Protein Target:</span>
+                                <strong>{{ user.data.max_daily_protein }} g</strong>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h4 class="mb-0">Today's Nutrition Tracking</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>Calories</h5>
+                                {% set calories = totals.calories|default(0) if totals else 0 %}
+                                {% set max_calories = user.data.max_daily_calories|default(2000) %}
+                                {% set calorie_percent = ((calories / max_calories * 100)|round|int) if max_calories > 0 else 0 %}
+                                <div class="progress mb-3" style="height: 25px;">
+                                    <div class="progress-bar {% if calorie_percent > 100 %}bg-danger{% endif %}" 
+                                         role="progressbar" 
+                                         style="width: {{ min(calorie_percent, 100) }}%">
+                                        {{ calories }}/{{ max_calories }} kcal
+                                    </div>
+                                </div>
+                                
+                                <h5>Protein</h5>
+                                {% set protein = totals.protein|default(0) if totals else 0 %}
+                                {% set max_protein = user.data.max_daily_protein|default(150) %}
+                                {% set protein_percent = ((protein / max_protein * 100)|round|int) if max_protein > 0 else 0 %}
+                                <div class="progress mb-3" style="height: 25px;">
+                                    <div class="progress-bar {% if protein_percent > 100 %}bg-danger{% endif %}" 
+                                         role="progressbar" 
+                                         style="width: {{ min(protein_percent, 100) }}%">
+                                        {{ protein }}/{{ max_protein }} g
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h5>Other Nutrients</h5>
+                                <ul class="list-group">
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span>Potassium:</span>
+                                        <strong>{{ (totals.potassium|default(0) if totals else 0)|round|int }} mg</strong>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span>Carbohydrates:</span>
+                                        <strong>{{ (totals.carbs|default(0) if totals else 0)|round|int }} g</strong>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span>Total Fat:</span>
+                                        <strong>{{ (totals.total_fat|default(0) if totals else 0)|round|int }} g</strong>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center">
+                    <a href="{{ url_for('home') }}" class="btn btn-primary">
+                        <i class="bi bi-camera"></i> Back to Scanner
+                    </a>
+                    <a href="{{ url_for('logs') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-clock-history"></i> View History
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
