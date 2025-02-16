@@ -53,24 +53,44 @@
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="weight" class="form-label">Weight (kg)</label>
-                            <input type="number" class="form-control" id="weight" name="weight" required 
-                                   min="30" max="300" step="0.1">
+                            <label for="weight" class="form-label">Current Weight (kg)</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="weight" name="weight" required 
+                                       min="30" max="300" step="0.1" oninput="updateWeightLbs()">
+                                <span class="input-group-text">kg</span>
+                            </div>
+                            <small class="form-text text-muted" id="weight_lbs"></small>
                             <div class="invalid-feedback">
                                 Please enter a valid weight between 30 and 300 kg
                             </div>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="height" class="form-label">Height (cm)</label>
-                            <input type="number" class="form-control" id="height" name="height" required 
-                                   min="100" max="250">
+                            <label for="target_weight" class="form-label">Target Weight (kg)</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="target_weight" name="target_weight" required 
+                                       min="30" max="300" step="0.1" oninput="updateTargetWeightLbs()">
+                                <span class="input-group-text">kg</span>
+                            </div>
+                            <small class="form-text text-muted" id="target_weight_lbs"></small>
                             <div class="invalid-feedback">
-                                Please enter a valid height between 100 and 250 cm
+                                Please enter a valid target weight between 30 and 300 kg
                             </div>
                         </div>
                     </div>
 
                     <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="height" class="form-label">Height (cm)</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="height" name="height" required 
+                                       min="100" max="250" oninput="updateHeightInches()">
+                                <span class="input-group-text">cm</span>
+                            </div>
+                            <small class="form-text text-muted" id="height_inches"></small>
+                            <div class="invalid-feedback">
+                                Please enter a valid height between 100 and 250 cm
+                            </div>
+                        </div>
                         <div class="col-md-6 mb-3">
                             <label for="goal" class="form-label">Fitness Goal</label>
                             <select class="form-select" id="goal" name="goal" required>
@@ -83,7 +103,10 @@
                                 Please select your goal
                             </div>
                         </div>
-                        <div class="col-md-6 mb-3">
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12 mb-3">
                             <label for="target_date" class="form-label">Target Date</label>
                             <input type="date" class="form-control" id="target_date" name="target_date" required>
                             <div class="invalid-feedback">
@@ -121,6 +144,30 @@
 
 // Set minimum target date to today
 document.getElementById('target_date').min = new Date().toISOString().split('T')[0];
+
+// Weight conversion functions
+function updateWeightLbs() {
+    const kg = document.getElementById('weight').value;
+    const lbs = (kg * 2.20462).toFixed(1);
+    document.getElementById('weight_lbs').textContent = `${lbs} lbs`;
+}
+
+function updateTargetWeightLbs() {
+    const kg = document.getElementById('target_weight').value;
+    const lbs = (kg * 2.20462).toFixed(1);
+    document.getElementById('target_weight_lbs').textContent = `${lbs} lbs`;
+}
+
+function updateHeightInches() {
+    const cm = document.getElementById('height').value;
+    const inches = (cm / 2.54).toFixed(1);
+    document.getElementById('height_inches').textContent = `${inches} inches`;
+}
+
+// Initialize conversions
+updateWeightLbs();
+updateTargetWeightLbs();
+updateHeightInches();
 </script>
 {% endblock %}
 {% endblock %} 
