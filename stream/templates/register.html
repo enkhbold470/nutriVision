@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Register - NutriVision{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow">
+            <div class="card-body">
+                <h2 class="text-center mb-4">Create Account</h2>
+                <form method="POST" action="{{ url_for('register') }}" class="needs-validation" novalidate>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" name="username" required 
+                                   pattern="^[a-zA-Z0-9]+$">
+                            <div class="invalid-feedback">
+                                Username can only contain letters and numbers
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" name="password" required 
+                                   minlength="6">
+                            <div class="invalid-feedback">
+                                Password must be at least 6 characters long
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="age" class="form-label">Age</label>
+                            <input type="number" class="form-control" id="age" name="age" required 
+                                   min="13" max="120">
+                            <div class="invalid-feedback">
+                                Please enter a valid age between 13 and 120
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="gender" class="form-label">Gender</label>
+                            <select class="form-select" id="gender" name="gender" required>
+                                <option value="">Choose...</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="other">Other</option>
+                            </select>
+                            <div class="invalid-feedback">
+                                Please select your gender
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="weight" class="form-label">Weight (kg)</label>
+                            <input type="number" class="form-control" id="weight" name="weight" required 
+                                   min="30" max="300" step="0.1">
+                            <div class="invalid-feedback">
+                                Please enter a valid weight between 30 and 300 kg
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="height" class="form-label">Height (cm)</label>
+                            <input type="number" class="form-control" id="height" name="height" required 
+                                   min="100" max="250">
+                            <div class="invalid-feedback">
+                                Please enter a valid height between 100 and 250 cm
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="goal" class="form-label">Fitness Goal</label>
+                            <select class="form-select" id="goal" name="goal" required>
+                                <option value="">Choose...</option>
+                                <option value="1">Lose Weight</option>
+                                <option value="2">Maintain Weight</option>
+                                <option value="3">Gain Weight</option>
+                            </select>
+                            <div class="invalid-feedback">
+                                Please select your goal
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="target_date" class="form-label">Target Date</label>
+                            <input type="date" class="form-control" id="target_date" name="target_date" required>
+                            <div class="invalid-feedback">
+                                Please select a target date
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Create Account</button>
+                        <a href="{{ url_for('login') }}" class="btn btn-outline-secondary">Already have an account?</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+// Form validation
+(function () {
+    'use strict'
+    var forms = document.querySelectorAll('.needs-validation')
+    Array.prototype.slice.call(forms).forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            if (!form.checkValidity()) {
+                event.preventDefault()
+                event.stopPropagation()
+            }
+            form.classList.add('was-validated')
+        }, false)
+    })
+})()
+
+// Set minimum target date to today
+document.getElementById('target_date').min = new Date().toISOString().split('T')[0];
+</script>
+{% endblock %}
+{% endblock %} 
