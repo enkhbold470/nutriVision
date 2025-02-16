@@ -77,15 +77,24 @@
             const resized = tf.image.resizeBilinear(videoFrame, [640, 640]); // YOLO input size
             const normalized = resized.div(255.0);
             const batched = normalized.expandDims(0);
+<<<<<<< HEAD
             // Transpose from [1, 640, 640, 3] to [1, 3, 640, 640]
             const input = batched.transpose([0, 3, 1, 2]);
 
             // Run inference with the transposed input
             const predictions =  model.predict(input);
+=======
+            const input = batched.transpose([0, 3, 1, 2]);
+
+            // Run inference
+            const predictions = model.predict(input);
+>>>>>>> ca21c35cdc335e7e2619768b0d88ce77c3e5989a
             
             // Clear previous drawings
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // console.log(predictions);
 
+<<<<<<< HEAD
             // Process and draw predictions
             // const [boxes, scores, classes] = predictions;
             console.log('Predictions:', predictions);
@@ -108,6 +117,64 @@
             //         ctx.lineWidth = 2;
             //         ctx.strokeRect(x, y, width, height);
 
+=======
+            const predictionsTensor = predictions;
+
+            // Extract bounding boxes and class probabilities
+            const boundingBoxes = predictionsTensor.slice([0, 0, 0], [1, 84, 4]); // Assuming 4 values for each box (x_min, y_min, x_max, y_max)
+            const classProbabilities = predictionsTensor.slice([0, 0, 4], [1, 84, 80]); // Assuming 80 class probabilities
+
+            // Convert bounding boxes and probabilities to arrays
+            const boundingBoxesArray = await boundingBoxes.array();
+            const classProbabilitiesArray = await classProbabilities.array();
+
+            // Example: Get box coordinates for the first detected object
+            const firstBoundingBox = boundingBoxesArray[0][0];  // This should give [x_min, y_min, x_max, y_max]
+            // console.log("Bounding Box for first object:", firstBoundingBox);
+
+            // Get class probabilities for the first object
+            const firstClassProbabilities = classProbabilitiesArray[0][0];
+            // console.log("Class Probabilities for first object:", firstClassProbabilities);
+
+            const threshold = 0.5;
+
+            const filteredBoxes = [];
+            for (let i = 0; i < boundingBoxesArray[0].length; i++) {
+                const box = boundingBoxesArray[0][i];
+                const scores = classProbabilitiesArray[0][i];
+                const maxScore = Math.max(...scores);  // Max confidence score
+                if (maxScore > threshold) {
+                    filteredBoxes.push({
+                        box: box,  // [x_min, y_min, x_max, y_max]
+                        score: maxScore,
+                        class: scores.indexOf(maxScore) // The class with the highest score
+                    });
+                }
+            }
+            console.log("Filtered Boxes:", filteredBoxes);
+
+            // Process and draw predictions
+            // const [boxes, scores, classes] = predictions;
+            // const validDetections = await predictions[3].data();
+
+            // for (let i = 0; i < validDetections[0]; i++) {
+            //     const [x1, y1, x2, y2] = boxes.arraySync()[0][i];
+            //     const score = scores.arraySync()[0][i];
+            //     const classId = classes.arraySync()[0][i];
+
+            //     if (score > 0.5) { // Confidence threshold
+            //         // Convert normalized coordinates to pixel values
+            //         const x = x1 * canvas.width;
+            //         const y = y1 * canvas.height;
+            //         const width = (x2 - x1) * canvas.width;
+            //         const height = (y2 - y1) * canvas.height;
+
+            //         // Draw bounding box
+            //         ctx.strokeStyle = '#00ff00';
+            //         ctx.lineWidth = 2;
+            //         ctx.strokeRect(x, y, width, height);
+
+>>>>>>> ca21c35cdc335e7e2619768b0d88ce77c3e5989a
             //         // Draw label
             //         ctx.fillStyle = '#00ff00';
             //         ctx.font = '16px Arial';
