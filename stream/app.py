@@ -350,14 +350,15 @@ def cleanup(error):
             video_camera = None
 
 @app.route("/logs")
+@login_required
 def logs():
     print("[DEBUG] Accessing logs page")
     page = request.args.get('page', 1, type=int)
     per_page = 10
     
     print(f"[DEBUG] Getting records for page {page}")
-    # Get records with pagination
-    records, total_pages, total_records = get_scan_records(page, per_page)
+    # Get records with pagination for the current user only
+    records, total_pages, total_records = get_scan_records(page, per_page, current_user.id)
     
     # Ensure page is within valid range
     page = max(1, min(page, total_pages if total_pages > 0 else 1))
@@ -516,29 +517,29 @@ def profile():
     conn = get_db_connection()
     cur = conn.cursor()
     
-    # Get today's totals
+    # Get today's totals with proper rounding and type conversion
     cur.execute('''
         SELECT 
-            COALESCE(SUM(total_cal), 0) as calories,
-            COALESCE(SUM(potassium), 0) as potassium,
-            COALESCE(SUM(protein), 0) as protein,
-            COALESCE(SUM(total_carbs), 0) as carbs,
-            COALESCE(SUM(total_fat), 0) as total_fat
+            ROUND(COALESCE(SUM(total_cal), 0), 1) as calories,
+            ROUND(COALESCE(SUM(potassium), 0), 1) as potassium,
+            ROUND(COALESCE(SUM(protein), 0), 1) as protein,
+            ROUND(COALESCE(SUM(total_carbs), 0), 1) as carbs,
+            ROUND(COALESCE(SUM(total_fat), 0), 1) as total_fat
         FROM scanned_items 
         WHERE user_id = ? 
-        AND date(timestamp) = date('now')
+        AND date(timestamp) = date('now', 'localtime')
     ''', (current_user.id,))
     
     totals = cur.fetchone()
     conn.close()
     
-    # Convert SQLite Row to dictionary with default values
+    # Convert SQLite Row to dictionary with proper float values
     totals_dict = {
-        'calories': totals['calories'] if totals else 0,
-        'potassium': totals['potassium'] if totals else 0,
-        'protein': totals['protein'] if totals else 0,
-        'carbs': totals['carbs'] if totals else 0,
-        'total_fat': totals['total_fat'] if totals else 0
+        'calories': float(totals['calories']) if totals else 0.0,
+        'potassium': float(totals['potassium']) if totals else 0.0,
+        'protein': float(totals['protein']) if totals else 0.0,
+        'carbs': float(totals['carbs']) if totals else 0.0,
+        'total_fat': float(totals['total_fat']) if totals else 0.0
     }
     
     return render_template('profile.html', user=current_user, totals=totals_dict)
