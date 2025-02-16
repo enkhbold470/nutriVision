@@ -2,284 +2,292 @@
 
 {% block title %}Profile - NutriVision{% endblock %}
 
+{% block extra_css %}
+<style>
+.bento-grid {
+    display: grid;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.bento-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.bento-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.status-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.status-Excellent { background-color: #d1fae5; color: #065f46; }
+.status-Good { background-color: #e0f2fe; color: #075985; }
+.status-Needs-Attention { background-color: #fef3c7; color: #92400e; }
+.status-Requires-Improvement { background-color: #fee2e2; color: #991b1b; }
+
+.insight-list {
+    list-style: none;
+    padding: 0;
+}
+
+.insight-list li {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: start;
+    gap: 0.5rem;
+}
+
+.insight-list li:last-child {
+    border-bottom: none;
+}
+
+.insight-icon {
+    flex-shrink: 0;
+    margin-top: 0.25rem;
+}
+
+.motivation-quote {
+    font-style: italic;
+    color: #4b5563;
+    padding: 1rem;
+    background-color: #f3f4f6;
+    border-radius: 8px;
+    margin-top: 1rem;
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card shadow mb-4">
-            <div class="card-body">
-                <h2 class="card-title text-center mb-4">Your Profile</h2>
+<div class="bento-grid">
+    <!-- AI Insights Card -->
+    <div class="bento-card">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="mb-0">AI-Driven Insights</h4>
+            <span class="status-badge status-{{ feedback.overall_status.replace(' ', '-') }}">
+                {{ feedback.overall_status }}
+            </span>
+        </div>
+        
+        <h5 class="mb-3">Key Insights</h5>
+        <ul class="insight-list mb-4">
+            {% for insight in feedback.key_insights %}
+            <li>
+                <i class="bi bi-lightbulb insight-icon text-primary"></i>
+                {{ insight }}
+            </li>
+            {% endfor %}
+        </ul>
+        
+        <h5 class="mb-3">Recommendations</h5>
+        <ul class="insight-list mb-4">
+            {% for rec in feedback.recommendations %}
+            <li>
+                <i class="bi bi-check-circle insight-icon text-success"></i>
+                {{ rec }}
+            </li>
+            {% endfor %}
+        </ul>
+        
+        <div class="motivation-quote">
+            <i class="bi bi-quote"></i> {{ feedback.motivation }}
+        </div>
+    </div>
+
+    <!-- Personal Information Card -->
+    <div class="bento-card">
+        <h4 class="mb-4">Personal Information</h4>
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item d-flex justify-content-between">
+                <span>Username:</span>
+                <strong>{{ user.username }}</strong>
+            </li>
+            <li class="list-group-item d-flex justify-content-between">
+                <span>Age:</span>
+                <strong>{{ user.data.age }} years</strong>
+            </li>
+            <li class="list-group-item d-flex justify-content-between">
+                <span>Current Weight:</span>
+                <strong>{{ user.data.weight }} kg ({{ (user.data.weight * 2.20462)|round|int }} lbs)</strong>
+            </li>
+            <li class="list-group-item d-flex justify-content-between">
+                <span>Target Weight:</span>
+                <strong>{{ user.data.target_weight|default(user.data.weight) }} kg ({{ (user.data.target_weight|default(user.data.weight) * 2.20462)|round|int }} lbs)</strong>
+            </li>
+            <li class="list-group-item d-flex justify-content-between">
+                <span>Height:</span>
+                <strong>{{ user.data.height }} cm ({{ (user.data.height / 2.54)|round|int }} in)</strong>
+            </li>
+            <li class="list-group-item d-flex justify-content-between">
+                <span>Gender:</span>
+                <strong>{{ user.data.gender|title }}</strong>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Fitness Goals Card -->
+    <div class="bento-card">
+        <h4 class="mb-4">Fitness Goals</h4>
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item d-flex justify-content-between">
+                <span>Goal:</span>
+                <strong>
+                    {% if user.data.goal == 1 %}
+                        Lose Weight
+                    {% elif user.data.goal == 2 %}
+                        Maintain Weight
+                    {% else %}
+                        Gain Weight
+                    {% endif %}
+                </strong>
+            </li>
+            <li class="list-group-item d-flex justify-content-between">
+                <span>Target Date:</span>
+                <strong>{{ user.data.target_date[:10] }}</strong>
+            </li>
+            <li class="list-group-item d-flex justify-content-between">
+                <span>Daily Calorie Target:</span>
+                <strong>{{ user.data.max_daily_calories }} kcal</strong>
+            </li>
+            <li class="list-group-item d-flex justify-content-between">
+                <span>Daily Protein Target:</span>
+                <strong>{{ user.data.max_daily_protein }} g</strong>
+            </li>
+            <li class="list-group-item d-flex justify-content-between">
+                <span>Weight Change:</span>
+                {% set weight_diff = (user.data.target_weight|default(user.data.weight) - user.data.weight) %}
+                {% set lbs_diff = (weight_diff * 2.20462)|round|int %}
+                <strong class="{% if weight_diff < 0 %}text-danger{% elif weight_diff > 0 %}text-success{% else %}text-muted{% endif %}">
+                    {{ weight_diff|round(1) }} kg ({{ lbs_diff }} lbs)
+                </strong>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Today's Nutrition Card -->
+    <div class="bento-card">
+        <h4 class="mb-4">Today's Nutrition</h4>
+        <div class="row">
+            <div class="col-md-6">
+                <h5>Calories</h5>
+                {% set calories = totals.calories|default(0) if totals else 0 %}
+                {% set max_calories = user.data.max_daily_calories|default(2000) %}
+                {% set calorie_percent = ((calories / max_calories * 100)|round|int) if max_calories > 0 else 0 %}
+                <div class="progress mb-3" style="height: 25px;">
+                    <div class="progress-bar {% if calorie_percent > 100 %}bg-danger{% endif %}" 
+                         role="progressbar" 
+                         style="width: {{ min(calorie_percent, 100) }}%">
+                        {{ calories }}/{{ max_calories }} kcal
+                    </div>
+                </div>
                 
-                <div class="row mb-4">
-                    <div class="col-md-6">
-                        <h4>Personal Information</h4>
-                        <ul class="list-group list-group-flush">
-                            <li class="list-group-item d-flex justify-content-between">
-                                <span>Username:</span>
-                                <strong>{{ user.username }}</strong>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between">
-                                <span>Age:</span>
-                                <strong>{{ user.data.age }} years</strong>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between">
-                                <span>Current Weight:</span>
-                                <strong>{{ user.data.weight }} kg ({{ (user.data.weight * 2.20462)|round|int }} lbs)</strong>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between">
-                                <span>Target Weight:</span>
-                                <strong>{{ user.data.target_weight|default(user.data.weight) }} kg ({{ (user.data.target_weight|default(user.data.weight) * 2.20462)|round|int }} lbs)</strong>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between">
-                                <span>Height:</span>
-                                <strong>{{ user.data.height }} cm ({{ (user.data.height / 2.54)|round|int }} in)</strong>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between">
-                                <span>Gender:</span>
-                                <strong>{{ user.data.gender|title }}</strong>
-                            </li>
-                        </ul>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <h4>Fitness Goals</h4>
-                        <ul class="list-group list-group-flush">
-                            <li class="list-group-item d-flex justify-content-between">
-                                <span>Goal:</span>
-                                <strong>
-                                    {% if user.data.goal == 1 %}
-                                        Lose Weight
-                                    {% elif user.data.goal == 2 %}
-                                        Maintain Weight
-                                    {% else %}
-                                        Gain Weight
-                                    {% endif %}
-                                </strong>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between">
-                                <span>Target Date:</span>
-                                <strong>{{ user.data.target_date[:10] }}</strong>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between">
-                                <span>Daily Calorie Target:</span>
-                                <strong>{{ user.data.max_daily_calories }} kcal</strong>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between">
-                                <span>Daily Protein Target:</span>
-                                <strong>{{ user.data.max_daily_protein }} g</strong>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between">
-                                <span>Weight Change:</span>
-                                {% set weight_diff = (user.data.target_weight|default(user.data.weight) - user.data.weight) %}
-                                {% set lbs_diff = (weight_diff * 2.20462)|round|int %}
-                                <strong class="{% if weight_diff < 0 %}text-danger{% elif weight_diff > 0 %}text-success{% else %}text-muted{% endif %}">
-                                    {{ weight_diff|round(1) }} kg ({{ lbs_diff }} lbs)
-                                </strong>
-                            </li>
-                        </ul>
+                <h5>Protein</h5>
+                {% set protein = totals.protein|default(0) if totals else 0 %}
+                {% set max_protein = user.data.max_daily_protein|default(150) %}
+                {% set protein_percent = ((protein / max_protein * 100)|round|int) if max_protein > 0 else 0 %}
+                <div class="progress mb-3" style="height: 25px;">
+                    <div class="progress-bar {% if protein_percent > 100 %}bg-danger{% endif %}" 
+                         role="progressbar" 
+                         style="width: {{ min(protein_percent, 100) }}%">
+                        {{ protein }}/{{ max_protein }} g
                     </div>
                 </div>
-
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h4 class="mb-0">Today's Nutrition Tracking</h4>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <h5>Calories</h5>
-                                {% set calories = totals.calories|default(0) if totals else 0 %}
-                                {% set max_calories = user.data.max_daily_calories|default(2000) %}
-                                {% set calorie_percent = ((calories / max_calories * 100)|round|int) if max_calories > 0 else 0 %}
-                                <div class="progress mb-3" style="height: 25px;">
-                                    <div class="progress-bar {% if calorie_percent > 100 %}bg-danger{% endif %}" 
-                                         role="progressbar" 
-                                         style="width: {{ min(calorie_percent, 100) }}%">
-                                        {{ calories }}/{{ max_calories }} kcal
-                                    </div>
-                                </div>
-                                
-                                <h5>Protein</h5>
-                                {% set protein = totals.protein|default(0) if totals else 0 %}
-                                {% set max_protein = user.data.max_daily_protein|default(150) %}
-                                {% set protein_percent = ((protein / max_protein * 100)|round|int) if max_protein > 0 else 0 %}
-                                <div class="progress mb-3" style="height: 25px;">
-                                    <div class="progress-bar {% if protein_percent > 100 %}bg-danger{% endif %}" 
-                                         role="progressbar" 
-                                         style="width: {{ min(protein_percent, 100) }}%">
-                                        {{ protein }}/{{ max_protein }} g
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <h5>Other Nutrients</h5>
-                                <ul class="list-group">
-                                    <li class="list-group-item d-flex justify-content-between">
-                                        <span>Potassium:</span>
-                                        <strong>{{ (totals.potassium|default(0) if totals else 0)|round|int }} mg</strong>
-                                    </li>
-                                    <li class="list-group-item d-flex justify-content-between">
-                                        <span>Carbohydrates:</span>
-                                        <strong>{{ (totals.carbs|default(0) if totals else 0)|round|int }} g</strong>
-                                    </li>
-                                    <li class="list-group-item d-flex justify-content-between">
-                                        <span>Total Fat:</span>
-                                        <strong>{{ (totals.total_fat|default(0) if totals else 0)|round|int }} g</strong>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="text-center">
-                    <a href="{{ url_for('home') }}" class="btn btn-primary">
-                        <i class="bi bi-camera"></i> Back to Scanner
-                    </a>
-                    <a href="{{ url_for('logs') }}" class="btn btn-outline-secondary">
-                        <i class="bi bi-clock-history"></i> View History
-                    </a>
-                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <h5>Other Nutrients</h5>
+                <ul class="list-group">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Potassium:</span>
+                        <strong>{{ (totals.potassium|default(0) if totals else 0)|round|int }} mg</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Carbohydrates:</span>
+                        <strong>{{ (totals.carbs|default(0) if totals else 0)|round|int }} g</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Total Fat:</span>
+                        <strong>{{ (totals.total_fat|default(0) if totals else 0)|round|int }} g</strong>
+                    </li>
+                </ul>
             </div>
         </div>
+    </div>
 
-        <!-- Achievements Section -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h4 class="mb-0">Achievements</h4>
+    <!-- Achievements Card -->
+    <div class="bento-card">
+        <h4 class="mb-4">Achievements</h4>
+        <div class="row g-3">
+            {% set achievements = get_user_achievements(user.id) %}
+            {% for achievement in achievements %}
+            <div class="col-md-6">
+                <div class="achievement-badge text-center p-3 {{ 'achieved' if achievement.unlocked else 'locked' }}">
+                    <div class="badge-icon mb-2">
+                        <i class="bi {{ achievement.icon }} fs-1"></i>
+                    </div>
+                    <h5 class="badge-title">{{ achievement.title }}</h5>
+                    <p class="badge-description small text-muted">{{ achievement.description }}</p>
+                    {% if achievement.unlocked %}
+                    <span class="badge bg-success">Unlocked</span>
+                    {% else %}
+                    <span class="badge bg-secondary">Locked</span>
+                    {% endif %}
+                </div>
             </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    {% set achievements = get_user_achievements(user.id) %}
-                    {% for achievement in achievements %}
-                    <div class="col-md-4 col-lg-3">
-                        <div class="achievement-badge text-center p-3 {{ 'achieved' if achievement.unlocked else 'locked' }}">
-                            <div class="badge-icon mb-2">
-                                <i class="bi {{ achievement.icon }} fs-1"></i>
-                            </div>
-                            <h5 class="badge-title">{{ achievement.title }}</h5>
-                            <p class="badge-description small text-muted">{{ achievement.description }}</p>
-                            {% if achievement.unlocked %}
-                            <span class="badge bg-success">Unlocked</span>
-                            {% else %}
-                            <span class="badge bg-secondary">Locked</span>
-                            {% endif %}
-                        </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Activity Tracker Card -->
+    <div class="bento-card">
+        <h4 class="mb-4">Activity Tracker</h4>
+        <div class="activity-grid">
+            {% set activity_data = get_activity_data(user.id) %}
+            <div class="activity-calendar">
+                {% for week in activity_data %}
+                <div class="activity-week">
+                    {% for day in week %}
+                    <div class="activity-day" 
+                         data-date="{{ day.date }}"
+                         data-count="{{ day.count }}"
+                         style="background-color: {{ get_activity_color(day.count) }}">
+                        <span class="activity-tooltip">
+                            {{ day.count }} scans on {{ day.date }}
+                        </span>
                     </div>
                     {% endfor %}
                 </div>
+                {% endfor %}
             </div>
-        </div>
-
-        <!-- Activity Tracker -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h4 class="mb-0">Activity Tracker</h4>
+            <div class="activity-legend mt-2">
+                <span>Less</span>
+                {% for level in range(5) %}
+                <div class="activity-level" style="background-color: {{ get_activity_color(level) }}"></div>
+                {% endfor %}
+                <span>More</span>
             </div>
-            <div class="card-body">
-                <div class="activity-grid">
-                    {% set activity_data = get_activity_data(user.id) %}
-                    <div class="activity-calendar">
-                        {% for week in activity_data %}
-                        <div class="activity-week">
-                            {% for day in week %}
-                            <div class="activity-day" 
-                                 data-date="{{ day.date }}"
-                                 data-count="{{ day.count }}"
-                                 style="background-color: {{ get_activity_color(day.count) }}">
-                                <span class="activity-tooltip">
-                                    {{ day.count }} scans on {{ day.date }}
-                                </span>
-                            </div>
-                            {% endfor %}
-                        </div>
-                        {% endfor %}
-                    </div>
-                    <div class="activity-legend mt-2">
-                        <span>Less</span>
-                        {% for level in range(5) %}
-                        <div class="activity-level" style="background-color: {{ get_activity_color(level) }}"></div>
-                        {% endfor %}
-                        <span>More</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <style>
-            .achievement-badge {
-                border-radius: 8px;
-                border: 1px solid #dee2e6;
-                transition: transform 0.2s;
-            }
-            .achievement-badge:hover {
-                transform: translateY(-5px);
-            }
-            .achievement-badge.achieved {
-                border-color: #28a745;
-            }
-            .achievement-badge.locked {
-                opacity: 0.7;
-            }
-            .activity-grid {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-            }
-            .activity-calendar {
-                display: flex;
-                gap: 2px;
-            }
-            .activity-week {
-                display: flex;
-                flex-direction: column;
-                gap: 2px;
-            }
-            .activity-day {
-                width: 10px;
-                height: 10px;
-                border-radius: 2px;
-                position: relative;
-            }
-            .activity-day:hover .activity-tooltip {
-                display: block;
-            }
-            .activity-tooltip {
-                display: none;
-                position: absolute;
-                background: #000;
-                color: #fff;
-                padding: 5px;
-                border-radius: 4px;
-                font-size: 12px;
-                bottom: 100%;
-                left: 50%;
-                transform: translateX(-50%);
-                white-space: nowrap;
-                z-index: 1;
-            }
-            .activity-legend {
-                display: flex;
-                align-items: center;
-                gap: 4px;
-                font-size: 12px;
-            }
-            .activity-level {
-                width: 10px;
-                height: 10px;
-                border-radius: 2px;
-            }
-        </style>
-
-        <div class="text-center">
-            <a href="{{ url_for('home') }}" class="btn btn-primary">
-                <i class="bi bi-camera"></i> Back to Scanner
-            </a>
-            <a href="{{ url_for('logs') }}" class="btn btn-outline-secondary">
-                <i class="bi bi-clock-history"></i> View History
-            </a>
         </div>
     </div>
+</div>
+
+<div class="text-center mt-4">
+    <a href="{{ url_for('home') }}" class="btn btn-primary">
+        <i class="bi bi-camera"></i> Back to Scanner
+    </a>
+    <a href="{{ url_for('logs') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-clock-history"></i> View History
+    </a>
 </div>
 
 <script>

@@ -9,17 +9,21 @@ import json
 from dotenv import load_dotenv
 import threading
 from threading import Lock
-from database import init_db, add_scan_record, get_scan_records, search_records, get_db_connection
+from database import init_db, add_scan_record, get_scan_records, search_records, get_db_connection, get_db, close_db
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime, timedelta
 
 # Load environment variables
 load_dotenv()
 print("[DEBUG] Environment variables loaded")
 
 # Initialize Flask app
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='/static')
 app.secret_key = os.getenv("SECRET_KEY", "your-secret-key")
 print("[DEBUG] Flask app initialized")
+
+# Register database close function
+app.teardown_appcontext(close_db)
 
 # Add min function to Jinja2 environment
 app.jinja_env.globals.update(min=min)
@@ -148,9 +152,13 @@ login_manager.login_view = 'login'
 init_db()
 print("[DEBUG] Database initialized")
 
-# Initialize OpenAI client
+# Initialize OpenAI clients
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-print("[DEBUG] OpenAI client initialized")
+perplexity_client = OpenAI(
+    api_key=os.getenv("PERPLEXITY_API_KEY"),
+    base_url="https://api.perplexity.ai"
+)
+print("[DEBUG] API clients initialized")
 
 # Global variables for video streaming
 class VideoCamera:
@@ -508,17 +516,107 @@ def logout():
     flash('You have been logged out', 'info')
     return redirect(url_for('login'))
 
+def get_personalized_feedback(user):
+    """Get AI-driven personalized feedback based on user's data and progress."""
+    try:
+        # Get user's recent activity
+        db = get_db()
+        recent_activity = db.execute('''
+            SELECT 
+                COUNT(*) as scan_count,
+                AVG(total_cal) as avg_calories,
+                AVG(protein) as avg_protein,
+                AVG(total_carbs) as avg_carbs,
+                AVG(total_fat) as avg_fat
+            FROM scanned_items 
+            WHERE user_id = ? 
+            AND timestamp >= date('now', '-7 days')
+        ''', (user.id,)).fetchone()
+
+        # Calculate progress towards goal
+        days_remaining = (datetime.strptime(user.data['target_date'], '%Y-%m-%d') - datetime.now()).days
+        weight_diff = abs(user.data['weight'] - user.data['target_weight'])
+        daily_change_needed = weight_diff / max(1, days_remaining) if days_remaining > 0 else 0
+
+        # Prepare context for AI
+        context = {
+            "user_stats": {
+                "age": user.data['age'],
+                "gender": user.data['gender'],
+                "current_weight": user.data['weight'],
+                "target_weight": user.data['target_weight'],
+                "height": user.data['height'],
+                "goal": "lose weight" if user.data['goal'] == 1 else "maintain weight" if user.data['goal'] == 2 else "gain weight",
+                "days_remaining": max(0, days_remaining),
+                "daily_change_needed": daily_change_needed
+            },
+            "recent_activity": {
+                "scans_last_7_days": recent_activity['scan_count'],
+                "avg_daily_calories": recent_activity['avg_calories'],
+                "avg_daily_protein": recent_activity['avg_protein'],
+                "avg_daily_carbs": recent_activity['avg_carbs'],
+                "avg_daily_fat": recent_activity['avg_fat']
+            },
+            "targets": {
+                "daily_calories": user.data['max_daily_calories'],
+                "daily_protein": user.data['max_daily_protein']
+            }
+        }
+
+        # Get AI insights
+        response = perplexity_client.chat.completions.create(
+            model="sonar-pro",
+            messages=[
+                {
+                    "role": "system",
+                    "content": """You are a professional nutritionist and fitness coach. Analyze the user's data and provide personalized feedback in the following JSON format:
+                    {
+                        "overall_status": "string (one of: 'Excellent', 'Good', 'Needs Attention', 'Requires Improvement')",
+                        "key_insights": ["string", "string", "string"],
+                        "recommendations": ["string", "string", "string"],
+                        "motivation": "string"
+                    }
+                    Keep insights and recommendations specific, actionable, and based on the data provided."""
+                },
+                {
+                    "role": "user",
+                    "content": f"Analyze this user's nutrition and fitness data and provide personalized feedback: {json.dumps(context)}"
+                }
+            ],
+            max_tokens=500
+        )
+
+        feedback = json.loads(response.choices[0].message.content)
+        return feedback
+
+    except Exception as e:
+        print(f"Error getting personalized feedback: {str(e)}")
+        return {
+            "overall_status": "Good",
+            "key_insights": [
+                "Unable to analyze recent activity",
+                "Continue tracking your meals regularly",
+                "Stay consistent with your goals"
+            ],
+            "recommendations": [
+                "Keep logging your meals",
+                "Maintain a balanced diet",
+                "Stay hydrated"
+            ],
+            "motivation": "Every small step counts towards your health goals!"
+        }
+
 @app.route("/profile")
 @login_required
 def profile():
+    """Display user profile with personalized feedback."""
     print("[DEBUG] Accessing profile page")
     
     # Get today's nutrition totals for the user
-    conn = get_db_connection()
-    cur = conn.cursor()
+    db = get_db()
     
     # Get today's totals with proper rounding and type conversion
-    cur.execute('''
+    totals = db.execute('''
         SELECT 
             ROUND(COALESCE(SUM(total_cal), 0), 1) as calories,
             ROUND(COALESCE(SUM(potassium), 0), 1) as potassium,
@@ -528,10 +626,7 @@ def profile():
         FROM scanned_items 
         WHERE user_id = ? 
         AND date(timestamp) = date('now', 'localtime')
-    ''', (current_user.id,))
-    
-    totals = cur.fetchone()
-    conn.close()
+    ''', (current_user.id,)).fetchone()
     
     # Convert SQLite Row to dictionary with proper float values
     totals_dict = {
@@ -542,7 +637,13 @@ def profile():
         'total_fat': float(totals['total_fat']) if totals else 0.0
     }
     
-    return render_template('profile.html', user=current_user, totals=totals_dict)
+    # Get personalized feedback
+    feedback = get_personalized_feedback(current_user)
+    
+    return render_template('profile.html', 
+                         user=current_user, 
+                         totals=totals_dict,
+                         feedback=feedback)
 
 @app.route("/get_nutrition_data")
 @login_required
