@@ -1,6 +1,7 @@
 
 from backend import db
 from backend.db import User
+from backend.claude_food_analyzer import ClaudeFoodAnalyzer
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
@@ -8,7 +9,9 @@ from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
-# change
+
+# Initialize Claude food analyzer
+food_analyzer = ClaudeFoodAnalyzer()
 
 def calculate_caloric_deficit(goal_weight_loss, target_date):
     """Calculate required daily caloric deficit based on goal weight loss and timeline."""
@@ -40,16 +43,28 @@ def analyze_food():
         if not image:
             return jsonify({'error': 'No image provided'}), 400
 
-        # TODO: Implement AI food recognition and nutrition analysis
-        # Placeholder response
-        nutrition_data = {
-            'food_name': 'Sample Food',
-            'calories': 250,
-            'protein': 10,
-            'carbs': 30,
-            'fat': 8
-        }
-        return jsonify(nutrition_data)
+        # Use Claude to analyze the food image
+        nutrition_data = food_analyzer.analyze_food_image(image)
+        
+        # Format response to match your existing structure
+        if nutrition_data and 'total_nutrition' in nutrition_data:
+            response = {
+                'foods_detected': nutrition_data.get('foods_detected', []),
+                'total_nutrition': nutrition_data.get('total_nutrition', {}),
+                'confidence': nutrition_data.get('confidence', 'medium'),
+                'notes': nutrition_data.get('notes', ''),
+                # Legacy format for backward compatibility
+                'food_name': ', '.join([food['name'] for food in nutrition_data.get('foods_detected', [])]),
+                'calories': nutrition_data.get('total_nutrition', {}).get('calories', 0),
+                'protein': nutrition_data.get('total_nutrition', {}).get('protein', 0),
+                'carbs': nutrition_data.get('total_nutrition', {}).get('carbs', 0),
+                'fat': nutrition_data.get('total_nutrition', {}).get('fat', 0),
+                'potassium': nutrition_data.get('total_nutrition', {}).get('potassium', 0)
+            }
+            return jsonify(response)
+        else:
+            return jsonify({'error': 'Could not analyze food image'}), 500
+            
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -66,14 +81,47 @@ def track_meal():
 def get_recommendations():
     try:
         user_id = request.args.get('user_id')
-        # TODO: Implement personalized recommendations
+        
+        if not user_id:
+            return jsonify({'error': 'User ID required'}), 400
+        
+        # Get user from database
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Prepare user goals and current nutrition for Claude
+        user_goals = {
+            'goal_weight_loss': user.goal,
+            'target_date': user.targetDate.isoformat() if user.targetDate else None,
+            'max_daily_calories': user.max_daily_calories,
+            'max_daily_protein': user.max_daily_protein
+        }
+        
+        current_nutrition = {
+            'calories': user.calories,
+            'protein': user.protein,
+            'carbs': user.carbs,
+            'fat': user.totalfat,
+            'potassium': user.potassium
+        }
+        
+        # Get AI-powered recommendations from Claude
+        claude_recommendations = food_analyzer.get_food_recommendations(user_goals, current_nutrition)
+        
+        # Format response
         recommendations = {
-            'daily_calories': 2000,
-            'suggestions': [
+            'daily_calories': user.max_daily_calories or 2000,
+            'current_intake': current_nutrition,
+            'ai_recommendations': claude_recommendations.get('recommendations', []),
+            'meal_suggestions': claude_recommendations.get('meal_suggestions', []),
+            'warnings': claude_recommendations.get('warnings', []),
+            # Legacy format
+            'suggestions': claude_recommendations.get('recommendations', [
                 'Increase protein intake',
                 'Add more vegetables to your diet',
                 'Stay hydrated'
-            ]
+            ])
         }
         return jsonify(recommendations)
     except Exception as e:
@@ -272,6 +320,65 @@ def recieveNutrientData():
 
 
 
+
+@app.route('/api/chat', methods=['POST'])
+def chat_with_claude():
+    """Chat with Claude about nutrition and health questions"""
+    try:
+        data = request.get_json()
+        user_message = data.get('message')
+        user_id = data.get('user_id')
+        
+        if not user_message:
+            return jsonify({'error': 'Message is required'}), 400
+        
+        # Get user context if provided
+        user_context = ""
+        if user_id:
+            user = User.query.get(user_id)
+            if user:
+                user_context = f"""
+                User Profile:
+                - Current calories today: {user.calories}
+                - Goal weight loss: {user.goal} lbs
+                - Max daily calories: {user.max_daily_calories}
+                - Current protein: {user.protein}g
+                - Current carbs: {user.carbs}g
+                - Current fat: {user.totalfat}g
+                """
+        
+        # Create a nutrition-focused prompt
+        prompt = f"""
+        You are a helpful nutrition assistant for NurtiVision, an AI-powered calorie tracking app. 
+        The user is asking: "{user_message}"
+        
+        {user_context}
+        
+        Please provide helpful, accurate nutrition advice. Keep responses conversational but informative.
+        Focus on practical tips related to their calorie tracking goals.
+        """
+        
+        # Send to Claude
+        message = food_analyzer.client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=500,
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        )
+        
+        response = {
+            'message': message.content[0].text,
+            'user_context_included': bool(user_id and user_context)
+        }
+        
+        return jsonify(response)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
