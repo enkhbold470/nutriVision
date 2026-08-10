@@ -48,7 +48,7 @@ export function MobileSettingsComponent() {
           </div>
           <div>
             <h2 className="text-xl font-semibold ">Enkhbold Ganbold</h2>
-            <p className="">enkhbold470@gmail.com</p>
+            <p className="">53986637+enkhbold470@users.noreply.github.com</p>
           </div>
         </div>
         <button className="mt-4  font-medium" onClick={() => console.log('Edit profile')}>
